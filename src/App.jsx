@@ -31,12 +31,13 @@ function getDb() {
 
 const LS = {
   get: (k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
-  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
-  del: (k) => localStorage.removeItem(k),
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del: (k) => { try { localStorage.removeItem(k); } catch {} },
 };
 const genCode = () => Math.random().toString(36).toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6).padEnd(6,"X");
 const genId   = () => Math.random().toString(36).slice(2,10);
 const fmt     = (n) => Number(n||0).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtInt  = (n) => Number(n||0).toLocaleString("fr-FR",{maximumFractionDigits:0});
 
 function useIsMobile() {
   const [m, setM] = useState(typeof window !== "undefined" ? window.innerWidth < 760 : false);
@@ -48,93 +49,111 @@ function useIsMobile() {
   return m;
 }
 
+const LANGS = [
+  { code:"fr", flag:"🇫🇷", name:"Français" },
+  { code:"en", flag:"🇬🇧", name:"English" },
+  { code:"es", flag:"🇪🇸", name:"Español" },
+];
+
 const T = {
   fr: {
     tagline:"Argent factice · Jeu 100% gratuit", heroSub:"Engage tes viewers avec des paris factices en direct.\nLe meilleur gagne le giveaway.",
     loginHint:"Connecte-toi pour créer ou rejoindre une session", loginTwitch:"Se connecter avec Twitch",
-    streamer:"Streamer", streamerDesc:"Lance une session, crée les marchés, désigne le gagnant.",
-    viewer:"Viewer", viewerDesc:"Entre le code partagé en stream pour participer.",
-    createSession:"Créer une session", codePlaceholder:"Ex: A3FX9K",
+    streamerDesc:"Lance une session, crée les marchés, désigne le gagnant.",
+    viewerDesc:"Entre le code partagé en stream pour participer.",
+    createSession:"Créer une session", codePlaceholder:"CODE",
     markets:"Marchés", create:"Créer", leaderboard:"Classement", bets:"Paris",
-    noMarket:"Aucun marché disponible.", noMarketAction:"Créer le premier →",
-    question:"Question", questionPlaceholder:"Ex: Qui va gagner le prochain duel ?",
-    options:"Options", openMarket:"Ouvrir le marché", closeBets:"Fermer les paris",
-    goLive:"▶ Go Live", endSession:"■ Terminer", copyLink:"🔗 Lien", copyCode:"📋 Code",
-    copied:"✓ Copié !", resolve:"✓", balance:"Solde", rank:"Rang", players:"Joueurs",
-    bet:"Parier", myBet:"Mon pari", sessionOf:"Session de", streamEnded:"🏆 Stream terminé !",
-    winner:"GAGNANT DU GIVEAWAY", myRank:"Ton classement", backHome:"← Retour à l'accueil",
-    waitingLobby:"En attente du démarrage…", open:"Ouvert", closed:"Fermé", resolved:"Résolu",
-    live:"LIVE", ended:"TERMINÉ", addOption:"+ Option", viewers:"viewers", totalPool:"Total",
+    noMarket:"Aucun marché pour l'instant.", noMarketAction:"Créer le premier →",
+    question:"Question", questionPlaceholder:"Ex : Qui gagne le prochain duel ?",
+    options:"Options & cotes", openMarket:"Ouvrir le marché", closeBets:"Fermer les paris",
+    goLive:"Lancer le live", endSession:"Terminer", copyLink:"Lien", copyCode:"Code",
+    copied:"Copié", balance:"Solde", rank:"Rang", players:"Joueurs",
+    bet:"Valider le pari", myBet:"Mon pari", sessionOf:"Session de", streamEnded:"Stream terminé",
+    winner:"Gagnant du giveaway", myRank:"Ton classement", backHome:"Retour à l'accueil",
+    waitingLobby:"En attente du lancement du live", open:"Ouvert", closed:"Fermé", resolved:"Résolu",
+    ended:"Terminé", addOption:"Ajouter une option", viewers:"joueurs",
     dashboard:"Dashboard", mySession:"Ma session",
     rebuyTab:"Recaves", rebuyNone:"Aucune demande en attente.",
-    rebuyBroke:"Tu es à sec !", rebuyHint:"Offre un sub au streamer pour repartir avec {n} coins.",
+    rebuyBroke:"Tu es à sec", rebuyHint:"Offre un sub au streamer pour repartir avec {n} coins.",
     rebuyAsk:"Demander une recave", rebuyPending:"Demande envoyée",
     rebuyPendingHint:"Le streamer va vérifier ton sub et valider.",
     rebuyApprove:"Valider", rebuyCount:"Recaves",
-    rebuyStreamerHint:"Vérifie le sub sur Twitch avant de valider. La validation remet le joueur à "+REBUY_AMOUNT+" coins.",
+    rebuyStreamerHint:"Vérifie le sub sur Twitch avant de valider. Le joueur repart avec "+REBUY_AMOUNT+" coins.",
     cancelBet:"Annuler mon pari", cancelled:"Pari annulé, mise remboursée.",
-    undoResolve:"↩ Annuler le résultat", undoDone:"Résultat annulé, marché rouvert.",
+    undoResolve:"Annuler le résultat", undoDone:"Résultat annulé, marché rouvert.",
     manageBets:"Gérer les paris", noBets:"Aucun pari sur ce marché.",
-    cancelThisBet:"Annuler ce pari", lastBet:"Dernier pari", noLastBet:"—",
-    stake:"Mise", potential:"Gain potentiel", pickOption:"Choisis une option",
+    lastBet:"Dernier", noLastBet:"—",
+    stake:"Mise", potential:"Gain potentiel", pickOption:"Choisis une option ci-dessus",
+    deleteMarket:"Supprimer le marché", deleted:"Marché supprimé, mises remboursées.",
+    confirmDelete:"Supprimer ce marché ? Toutes les mises seront remboursées.",
+    reopen:"Rouvrir", odds:"Cote", customOdds:"Cote personnalisée",
+    example:"100 misés rapportent", totalStaked:"misés",
   },
   en: {
-    tagline:"Fake money · 100% free game", heroSub:"Engage your viewers with live fake bets.\nThe best player wins the giveaway.",
+    tagline:"Play money · 100% free", heroSub:"Get your viewers betting live with play money.\nThe best one wins the giveaway.",
     loginHint:"Sign in to create or join a session", loginTwitch:"Sign in with Twitch",
-    streamer:"Streamer", streamerDesc:"Start a session, create markets, pick the winner.",
-    viewer:"Viewer", viewerDesc:"Enter the code shared in stream to participate.",
-    createSession:"Create a session", codePlaceholder:"Ex: A3FX9K",
+    streamerDesc:"Start a session, create markets, pick the winner.",
+    viewerDesc:"Enter the code shared on stream to join in.",
+    createSession:"Create a session", codePlaceholder:"CODE",
     markets:"Markets", create:"Create", leaderboard:"Leaderboard", bets:"Bets",
-    noMarket:"No markets available yet.", noMarketAction:"Create the first one →",
-    question:"Question", questionPlaceholder:"Ex: Who will win the next duel?",
-    options:"Options", openMarket:"Open market", closeBets:"Close bets",
-    goLive:"▶ Go Live", endSession:"■ End stream", copyLink:"🔗 Link", copyCode:"📋 Code",
-    copied:"✓ Copied!", resolve:"✓", balance:"Balance", rank:"Rank", players:"Players",
-    bet:"Bet", myBet:"My bet", sessionOf:"Session by", streamEnded:"🏆 Stream ended!",
-    winner:"GIVEAWAY WINNER", myRank:"Your rank", backHome:"← Back to home",
-    waitingLobby:"Waiting for stream to start…", open:"Open", closed:"Closed", resolved:"Resolved",
-    live:"LIVE", ended:"ENDED", addOption:"+ Option", viewers:"viewers", totalPool:"Total",
+    noMarket:"No markets yet.", noMarketAction:"Create the first one →",
+    question:"Question", questionPlaceholder:"e.g. Who wins the next duel?",
+    options:"Options & odds", openMarket:"Open market", closeBets:"Close betting",
+    goLive:"Go live", endSession:"End stream", copyLink:"Link", copyCode:"Code",
+    copied:"Copied", balance:"Balance", rank:"Rank", players:"Players",
+    bet:"Place bet", myBet:"My bet", sessionOf:"Session by", streamEnded:"Stream over",
+    winner:"Giveaway winner", myRank:"Your rank", backHome:"Back to home",
+    waitingLobby:"Waiting for the stream to start", open:"Open", closed:"Closed", resolved:"Settled",
+    ended:"Ended", addOption:"Add an option", viewers:"players",
     dashboard:"Dashboard", mySession:"My session",
-    rebuyTab:"Rebuys", rebuyNone:"No pending request.",
-    rebuyBroke:"You're broke!", rebuyHint:"Gift a sub to the streamer to restart with {n} coins.",
+    rebuyTab:"Rebuys", rebuyNone:"No pending requests.",
+    rebuyBroke:"You're out of coins", rebuyHint:"Gift a sub to the streamer to restart with {n} coins.",
     rebuyAsk:"Request a rebuy", rebuyPending:"Request sent",
-    rebuyPendingHint:"The streamer will check your sub and approve.",
+    rebuyPendingHint:"The streamer will check your sub and approve it.",
     rebuyApprove:"Approve", rebuyCount:"Rebuys",
-    rebuyStreamerHint:"Check the sub on Twitch before approving. Approving sets the player to "+REBUY_AMOUNT+" coins.",
+    rebuyStreamerHint:"Check the sub on Twitch before approving. The player restarts with "+REBUY_AMOUNT+" coins.",
     cancelBet:"Cancel my bet", cancelled:"Bet cancelled, stake refunded.",
-    undoResolve:"↩ Undo result", undoDone:"Result undone, market reopened.",
+    undoResolve:"Undo result", undoDone:"Result undone, market reopened.",
     manageBets:"Manage bets", noBets:"No bets on this market.",
-    cancelThisBet:"Cancel this bet", lastBet:"Last bet", noLastBet:"—",
-    stake:"Stake", potential:"Potential win", pickOption:"Pick an option",
+    lastBet:"Last", noLastBet:"—",
+    stake:"Stake", potential:"Potential win", pickOption:"Pick an option above",
+    deleteMarket:"Delete market", deleted:"Market deleted, stakes refunded.",
+    confirmDelete:"Delete this market? Every stake will be refunded.",
+    reopen:"Reopen", odds:"Odds", customOdds:"Custom odds",
+    example:"100 staked returns", totalStaked:"staked",
   },
   es: {
-    tagline:"Dinero ficticio · Juego 100% gratis", heroSub:"Involucra a tus viewers con apuestas falsas.\nEl mejor gana el giveaway.",
+    tagline:"Dinero ficticio · 100% gratis", heroSub:"Haz que tus viewers apuesten en directo con dinero ficticio.\nEl mejor gana el giveaway.",
     loginHint:"Conéctate para crear o unirte a una sesión", loginTwitch:"Conectarse con Twitch",
-    streamer:"Streamer", streamerDesc:"Inicia una sesión, crea mercados, elige al ganador.",
-    viewer:"Viewer", viewerDesc:"Introduce el código compartido en stream para participar.",
-    createSession:"Crear una sesión", codePlaceholder:"Ej: A3FX9K",
+    streamerDesc:"Inicia una sesión, crea mercados, elige al ganador.",
+    viewerDesc:"Introduce el código compartido en el stream para participar.",
+    createSession:"Crear una sesión", codePlaceholder:"CÓDIGO",
     markets:"Mercados", create:"Crear", leaderboard:"Clasificación", bets:"Apuestas",
-    noMarket:"No hay mercados disponibles.", noMarketAction:"Crear el primero →",
-    question:"Pregunta", questionPlaceholder:"¿Quién ganará el próximo duelo?",
-    options:"Opciones", openMarket:"Abrir mercado", closeBets:"Cerrar apuestas",
-    goLive:"▶ En directo", endSession:"■ Terminar", copyLink:"🔗 Enlace", copyCode:"📋 Código",
-    copied:"✓ ¡Copiado!", resolve:"✓", balance:"Saldo", rank:"Rango", players:"Jugadores",
-    bet:"Apostar", myBet:"Mi apuesta", sessionOf:"Sesión de", streamEnded:"🏆 ¡Stream terminado!",
-    winner:"GANADOR DEL GIVEAWAY", myRank:"Tu clasificación", backHome:"← Volver al inicio",
-    waitingLobby:"Esperando el inicio…", open:"Abierto", closed:"Cerrado", resolved:"Resuelto",
-    live:"EN DIRECTO", ended:"TERMINADO", addOption:"+ Opción", viewers:"viewers", totalPool:"Total",
+    noMarket:"Todavía no hay mercados.", noMarketAction:"Crear el primero →",
+    question:"Pregunta", questionPlaceholder:"Ej.: ¿Quién gana el próximo duelo?",
+    options:"Opciones y cuotas", openMarket:"Abrir mercado", closeBets:"Cerrar apuestas",
+    goLive:"Empezar el directo", endSession:"Terminar", copyLink:"Enlace", copyCode:"Código",
+    copied:"Copiado", balance:"Saldo", rank:"Puesto", players:"Jugadores",
+    bet:"Confirmar apuesta", myBet:"Mi apuesta", sessionOf:"Sesión de", streamEnded:"Stream terminado",
+    winner:"Ganador del giveaway", myRank:"Tu puesto", backHome:"Volver al inicio",
+    waitingLobby:"Esperando el inicio del directo", open:"Abierto", closed:"Cerrado", resolved:"Resuelto",
+    ended:"Terminado", addOption:"Añadir una opción", viewers:"jugadores",
     dashboard:"Panel", mySession:"Mi sesión",
     rebuyTab:"Recargas", rebuyNone:"No hay solicitudes pendientes.",
-    rebuyBroke:"¡Estás sin fondos!", rebuyHint:"Regala un sub al streamer para volver con {n} coins.",
+    rebuyBroke:"Te has quedado sin coins", rebuyHint:"Regala un sub al streamer para volver con {n} coins.",
     rebuyAsk:"Pedir una recarga", rebuyPending:"Solicitud enviada",
     rebuyPendingHint:"El streamer verificará tu sub y la aprobará.",
     rebuyApprove:"Aprobar", rebuyCount:"Recargas",
-    rebuyStreamerHint:"Verifica el sub en Twitch antes de aprobar. Aprobar deja al jugador con "+REBUY_AMOUNT+" coins.",
+    rebuyStreamerHint:"Verifica el sub en Twitch antes de aprobar. El jugador vuelve con "+REBUY_AMOUNT+" coins.",
     cancelBet:"Cancelar mi apuesta", cancelled:"Apuesta cancelada, importe devuelto.",
-    undoResolve:"↩ Anular resultado", undoDone:"Resultado anulado, mercado reabierto.",
+    undoResolve:"Anular resultado", undoDone:"Resultado anulado, mercado reabierto.",
     manageBets:"Gestionar apuestas", noBets:"No hay apuestas en este mercado.",
-    cancelThisBet:"Cancelar esta apuesta", lastBet:"Última apuesta", noLastBet:"—",
-    stake:"Importe", potential:"Ganancia potencial", pickOption:"Elige una opción",
+    lastBet:"Última", noLastBet:"—",
+    stake:"Importe", potential:"Ganancia potencial", pickOption:"Elige una opción arriba",
+    deleteMarket:"Eliminar mercado", deleted:"Mercado eliminado, importes devueltos.",
+    confirmDelete:"¿Eliminar este mercado? Se devolverán todos los importes.",
+    reopen:"Reabrir", odds:"Cuota", customOdds:"Cuota personalizada",
+    example:"100 apostados devuelven", totalStaked:"apostados",
   }
 };
 
@@ -174,7 +193,7 @@ export default function App() {
       LS.del("bv_pending_token");
       setAuthLoading(true);
       fetchTwitchUser(pending).then(u => {
-        const user = { id:u.id, login:u.login, displayName:u.display_name, avatar:u.profile_image_url, token:pending, platform:"twitch" };
+        const user = { id:u.id, login:u.login, displayName:u.display_name, avatar:u.profile_image_url, token:pending };
         setTwitchUser(user); LS.set("bv_user", user); setAuthLoading(false);
       }).catch(() => { setAuthError("Profil Twitch introuvable."); setAuthLoading(false); });
       return;
@@ -185,12 +204,12 @@ export default function App() {
     const token = params.get("access_token");
     const state = params.get("state");
     window.history.replaceState({}, "", window.location.pathname);
-    if (!token || state !== LS.get("bv_state")) { setAuthError("Auth échouée."); return; }
+    if (!token || state !== LS.get("bv_state")) { setAuthError("Authentification échouée."); return; }
     LS.del("bv_state");
     LS.set("bv_pending_token", token);
     setAuthLoading(true);
     fetchTwitchUser(token).then(u => {
-      const user = { id:u.id, login:u.login, displayName:u.display_name, avatar:u.profile_image_url, token, platform:"twitch" };
+      const user = { id:u.id, login:u.login, displayName:u.display_name, avatar:u.profile_image_url, token };
       LS.del("bv_pending_token");
       setTwitchUser(user); LS.set("bv_user", user); setAuthLoading(false);
     }).catch(() => { setAuthError("Profil Twitch introuvable."); setAuthLoading(false); });
@@ -213,7 +232,7 @@ export default function App() {
   }
   useEffect(() => () => { if (unsub.current) unsub.current(); }, []);
 
-  function showToast(msg, type="ok") { setToast({msg,type}); setTimeout(()=>setToast(null),3500); }
+  function showToast(msg, type="ok") { setToast({msg,type,id:Date.now()}); setTimeout(()=>setToast(null),3400); }
 
   async function handleCreate() {
     const code = genCode();
@@ -225,14 +244,14 @@ export default function App() {
       markets:{},
     });
     setSessionCode(code); subscribeSession(code); setView("streamer");
-    showToast(`Session créée ! Code : ${code}`);
+    showToast(`Session ${code} créée`);
   }
 
   async function handleJoin(code) {
     const snap = await get(ref(getDb(), `sessions/${code}`));
     if (!snap.exists()) return showToast("Code introuvable.", "err");
     const data = snap.val();
-    if (data.status === "ended") return showToast("Session terminée.", "err");
+    if (data.status === "ended") return showToast("Cette session est terminée.", "err");
     if (!data.participants?.[twitchUser.login]) {
       await set(ref(getDb(), `sessions/${code}/participants/${twitchUser.login}`), {
         login:twitchUser.login, displayName:twitchUser.displayName, avatar:twitchUser.avatar, balance:STARTING_BALANCE, joinedAt:Date.now(),
@@ -240,10 +259,10 @@ export default function App() {
     }
     setSessionCode(code); subscribeSession(code);
     setView(data.streamerLogin === twitchUser.login ? "streamer" : "viewer");
-    showToast(`Rejoint la session ${code} !`);
+    showToast(`Session ${code} rejointe`);
   }
 
-  async function handleStartLive() { await update(ref(getDb(),`sessions/${sessionCode}`),{status:"live"}); showToast("Le live a démarré !"); }
+  async function handleStartLive() { await update(ref(getDb(),`sessions/${sessionCode}`),{status:"live"}); showToast("Le live a démarré"); }
   async function handleEndSession() { await update(ref(getDb(),`sessions/${sessionCode}`),{status:"ended"}); setView("results"); }
 
   async function handleCreateMarket(title, options) {
@@ -251,11 +270,11 @@ export default function App() {
     const opts = {};
     options.forEach(({label, odds}) => { const oid=genId(); opts[oid]={id:oid, label, odds, bettors:{}}; });
     await set(ref(getDb(),`sessions/${sessionCode}/markets/${id}`),{id,title,options:opts,status:"open",createdAt:Date.now(),winner:null});
-    showToast("Marché ouvert !");
+    showToast("Marché ouvert");
   }
 
   async function handleCloseMarket(marketId) { await update(ref(getDb(),`sessions/${sessionCode}/markets/${marketId}`),{status:"closed"}); }
-  async function handleReopenMarket(marketId) { await update(ref(getDb(),`sessions/${sessionCode}/markets/${marketId}`),{status:"open"}); showToast("Paris rouverts."); }
+  async function handleReopenMarket(marketId) { await update(ref(getDb(),`sessions/${sessionCode}/markets/${marketId}`),{status:"open"}); showToast("Paris rouverts"); }
 
   async function handleResolveMarket(marketId, winOptId) {
     const snap = await get(ref(getDb(),`sessions/${sessionCode}`));
@@ -283,10 +302,9 @@ export default function App() {
       });
     });
     await update(ref(getDb()),updates);
-    showToast("🏆 Gains distribués !");
+    showToast("Gains distribués");
   }
 
-  // ── Annuler le résultat d'un marché déjà résolu : on rembourse les gains versés ──
   async function handleUndoResolve(marketId) {
     const snap = await get(ref(getDb(),`sessions/${sessionCode}`));
     const s = snap.val();
@@ -304,7 +322,6 @@ export default function App() {
         updates[`sessions/${sessionCode}/participants/${login}/balance`] = +(cur - amount*optOdds).toFixed(2);
       });
     });
-    // On efface le dernier résultat de tous ceux dont il venait de ce marché
     Object.values(market.options||{}).forEach(opt => {
       Object.keys(opt.bettors||{}).forEach(login => {
         if (s.participants?.[login]?.lastResult?.marketId === marketId)
@@ -315,6 +332,34 @@ export default function App() {
     showToast(t.undoDone);
   }
 
+  // ── Supprimer un marché : on rembourse chaque mise, en retirant d'abord les gains déjà versés ──
+  async function handleDeleteMarket(marketId) {
+    const snap = await get(ref(getDb(),`sessions/${sessionCode}`));
+    const s = snap.val();
+    const market = s.markets?.[marketId];
+    if (!market) return;
+    const balances = {};
+    const readBal = (login) => balances[login] !== undefined
+      ? balances[login] : (balances[login] = s.participants?.[login]?.balance || 0);
+    Object.values(market.options||{}).forEach(opt => {
+      const optOdds = opt.odds || 2;
+      Object.entries(opt.bettors||{}).forEach(([login,amount]) => {
+        let b = readBal(login) + amount;
+        if (market.status === "resolved" && market.winner === opt.id) b -= amount*optOdds;
+        balances[login] = +b.toFixed(2);
+      });
+    });
+    const updates = {};
+    updates[`sessions/${sessionCode}/markets/${marketId}`] = null;
+    Object.entries(balances).forEach(([login,b]) => {
+      updates[`sessions/${sessionCode}/participants/${login}/balance`] = b;
+      if (s.participants?.[login]?.lastResult?.marketId === marketId)
+        updates[`sessions/${sessionCode}/participants/${login}/lastResult`] = null;
+    });
+    await update(ref(getDb()),updates);
+    showToast(t.deleted);
+  }
+
   async function handleBet(marketId, optionId, amount) {
     const snap = await get(ref(getDb(),`sessions/${sessionCode}`));
     const s = snap.val();
@@ -322,18 +367,17 @@ export default function App() {
     if (!participant) return showToast("Participant introuvable.","err");
     if (amount>participant.balance) return showToast("Solde insuffisant.","err");
     const market = s.markets?.[marketId];
-    if (!market||market.status!=="open") return showToast("Paris fermés.","err");
-    if (Object.values(market.options||{}).some(o=>o.bettors?.[twitchUser.login])) return showToast("Tu as déjà parié.","err");
+    if (!market||market.status!=="open") return showToast("Les paris sont fermés.","err");
+    if (Object.values(market.options||{}).some(o=>o.bettors?.[twitchUser.login])) return showToast("Tu as déjà parié sur ce marché.","err");
     const optData = market.options[optionId];
     const optOdds = optData?.odds || 2;
     const updates = {};
     updates[`sessions/${sessionCode}/markets/${marketId}/options/${optionId}/bettors/${twitchUser.login}`]=amount;
     updates[`sessions/${sessionCode}/participants/${twitchUser.login}/balance`]=+(participant.balance-amount).toFixed(2);
     await update(ref(getDb()),updates);
-    showToast(`Pari de ${fmt(amount)} coins ! Gain potentiel : ${fmt(amount*optOdds)} coins (×${optOdds})`);
+    showToast(`${fmt(amount)} misés · gain potentiel ${fmt(amount*optOdds)}`);
   }
 
-  // ── Annulation d'un pari. force=true => le streamer, même sur un marché résolu ──
   async function handleCancelBet(marketId, login, force=false) {
     const snap = await get(ref(getDb(),`sessions/${sessionCode}`));
     const s = snap.val();
@@ -345,7 +389,6 @@ export default function App() {
     if (!opt) return showToast("Aucun pari à annuler.","err");
     const amount = opt.bettors[login];
     const cur = s.participants?.[login]?.balance || 0;
-    // On rend la mise ; si le marché était résolu et que ce pari avait gagné, on retire aussi le gain versé
     let newBalance = cur + amount;
     if (market.status === "resolved" && market.winner === opt.id)
       newBalance = cur - amount*(opt.odds||2) + amount;
@@ -365,12 +408,12 @@ export default function App() {
     if (!p) return showToast("Participant introuvable.","err");
     if ((p.balance||0) > 0) return showToast("Recave possible uniquement à 0 coin.","err");
     if (s.rebuyRequests?.[twitchUser.login]?.status === "pending")
-      return showToast("Demande déjà en attente.","err");
+      return showToast("Ta demande est déjà en attente.","err");
     await set(ref(getDb(),`sessions/${sessionCode}/rebuyRequests/${twitchUser.login}`),{
       login: twitchUser.login, displayName: twitchUser.displayName,
       avatar: twitchUser.avatar, status: "pending", requestedAt: Date.now(),
     });
-    showToast("Demande envoyée au streamer !");
+    showToast("Demande envoyée au streamer");
   }
 
   async function handleApproveRebuy(login) {
@@ -383,20 +426,16 @@ export default function App() {
     updates[`sessions/${sessionCode}/participants/${login}/rebuys`] = (p.rebuys||0) + 1;
     updates[`sessions/${sessionCode}/rebuyRequests/${login}`] = null;
     await update(ref(getDb()),updates);
-    showToast(`${p.displayName} repart avec ${fmt(REBUY_AMOUNT)} coins !`);
+    showToast(`${p.displayName} repart avec ${fmtInt(REBUY_AMOUNT)} coins`);
   }
 
   async function handleRejectRebuy(login) {
     await set(ref(getDb(),`sessions/${sessionCode}/rebuyRequests/${login}`), null);
-    showToast("Demande refusée.");
+    showToast("Demande refusée");
   }
 
   function logout() { LS.del("bv_user"); setTwitchUser(null); setView("home"); setSession(null); setSessionCode(null); if(unsub.current) unsub.current(); }
-  function toggleLang() {
-    const langs=["fr","en","es"];
-    const next=langs[(langs.indexOf(lang)+1)%langs.length];
-    setLang(next); LS.set("bv_lang",next);
-  }
+  function changeLang(code) { setLang(code); LS.set("bv_lang", code); }
 
   const isStreamer = session?.streamerLogin === twitchUser?.login;
 
@@ -404,16 +443,19 @@ export default function App() {
     <div style={S.root}>
       <style>{CSS}</style>
       <div style={S.bgGlow} />
-      {toast && <div className={`toast toast-${toast.type}`}>{toast.msg}</div>}
-      <Nav user={twitchUser} onLogout={logout} onHome={()=>setView("home")} session={session} isStreamer={isStreamer} onDash={()=>setView(isStreamer?"streamer":"viewer")} lang={lang} onToggleLang={toggleLang} t={t} />
+      <div style={S.bgGrid} />
+      {toast && <div key={toast.id} className={`toast toast-${toast.type}`}>{toast.msg}</div>}
+      <Nav user={twitchUser} onLogout={logout} onHome={()=>setView("home")} session={session}
+        isStreamer={isStreamer} onDash={()=>setView(isStreamer?"streamer":"viewer")}
+        lang={lang} onChangeLang={changeLang} t={t} />
       <main style={S.main}>
         {authLoading && <Loader />}
         {authError && <ErrorBanner msg={authError} onDismiss={()=>setAuthError("")} />}
         {view==="home" && !authLoading && <HomePage user={twitchUser} t={t} onLogin={()=>{window.location.href=buildTwitchURL();}} onCreate={handleCreate} onJoin={handleJoin} />}
-        {view==="streamer" && session && <StreamerDash session={session} user={twitchUser} t={t}
+        {view==="streamer" && session && <StreamerDash session={session} t={t}
           onCreateMarket={handleCreateMarket} onCloseMarket={handleCloseMarket} onReopenMarket={handleReopenMarket}
           onResolveMarket={handleResolveMarket} onUndoResolve={handleUndoResolve} onCancelBet={handleCancelBet}
-          onStartLive={handleStartLive} onEndSession={handleEndSession}
+          onDeleteMarket={handleDeleteMarket} onStartLive={handleStartLive} onEndSession={handleEndSession}
           onApproveRebuy={handleApproveRebuy} onRejectRebuy={handleRejectRebuy} />}
         {view==="viewer" && session && <ViewerDash session={session} user={twitchUser} t={t} onBet={handleBet} onCancelBet={handleCancelBet} onRequestRebuy={handleRequestRebuy} />}
         {view==="results" && session && <ResultsPage session={session} user={twitchUser} t={t} onHome={()=>{setView("home");setSession(null);setSessionCode(null);}} />}
@@ -422,51 +464,82 @@ export default function App() {
   );
 }
 
-function Nav({ user, onLogout, onHome, session, isStreamer, onDash, lang, onToggleLang, t }) {
+// ─────────────────────────── NAV ───────────────────────────
+function Nav({ user, onLogout, onHome, session, isStreamer, onDash, lang, onChangeLang, t }) {
   const mobile = useIsMobile();
+  const [langOpen, setLangOpen] = useState(false);
+  const boxRef = useRef(null);
+  const current = LANGS.find(l=>l.code===lang) || LANGS[0];
+
+  useEffect(() => {
+    if (!langOpen) return;
+    const fn = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setLangOpen(false); };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, [langOpen]);
+
   return (
-    <nav style={{...S.nav, padding:mobile?"10px 14px":"12px 28px"}}>
+    <nav style={{...S.nav, padding: mobile?"10px 14px":"12px 26px"}}>
       <div style={S.navBrand} onClick={onHome}>
-        <img src={LOGO} alt="BETterviewer" style={{height:mobile?34:52, width:"auto", objectFit:"contain"}} />
+        <img src={LOGO} alt="BETterviewer" style={{height:mobile?32:46, width:"auto", objectFit:"contain"}} />
         {session && (
           <div style={S.sessionPill}>
-            {session.status==="live"?<><span style={S.liveDot}/>LIVE</>:session.status==="lobby"?"LOBBY":t.ended}
-            <span style={{opacity:.4}}>·</span>
-            <span style={{fontFamily:"'DM Mono',monospace",fontWeight:700,color:"#c4b5fd"}}>{session.code}</span>
+            {session.status==="live" && <span style={S.liveDot}/>}
+            <span style={S.sessionPillState}>
+              {session.status==="live"?"LIVE":session.status==="lobby"?"LOBBY":t.ended.toUpperCase()}
+            </span>
+            <span style={S.sessionPillSep}/>
+            <span style={S.sessionPillCode}>{session.code}</span>
           </div>
         )}
       </div>
       <div style={S.navRight}>
         {session && <button style={S.navBtn} onClick={onDash}>{isStreamer?t.dashboard:t.mySession}</button>}
-        <button style={S.langBtn} onClick={onToggleLang}>
-          {lang==="fr"?"🇬🇧 EN":lang==="en"?"🇪🇸 ES":"🇫🇷 FR"}
-        </button>
+        <div ref={boxRef} style={{position:"relative"}}>
+          <button style={S.langBtn} onClick={()=>setLangOpen(v=>!v)} aria-expanded={langOpen}>
+            <span style={{fontSize:14}}>{current.flag}</span>
+            {!mobile && <span>{current.code.toUpperCase()}</span>}
+            <span style={{...S.caret, transform: langOpen?"rotate(180deg)":"none"}}>▾</span>
+          </button>
+          {langOpen && (
+            <div style={S.langMenu}>
+              {LANGS.map(l=>(
+                <button key={l.code}
+                  style={{...S.langItem, ...(l.code===lang?S.langItemOn:{})}}
+                  onClick={()=>{onChangeLang(l.code); setLangOpen(false);}}>
+                  <span style={{fontSize:15}}>{l.flag}</span>
+                  <span style={{flex:1,textAlign:"left"}}>{l.name}</span>
+                  {l.code===lang && <span style={{color:"var(--gold)"}}>✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         {user ? (
           <div style={S.userChip}>
             <img src={user.avatar} style={S.ava} alt="" />
             {!mobile && <span style={S.uname}>{user.displayName}</span>}
-            <button style={S.logoutBtn} onClick={onLogout}>↩</button>
+            <button style={S.logoutBtn} onClick={onLogout} title="Déconnexion">⏻</button>
           </div>
-        ) : <span style={S.guestTxt}>{lang==="fr"?"Non connecté":"Not signed in"}</span>}
+        ) : <span style={S.guestTxt}>{lang==="fr"?"Non connecté":lang==="es"?"Sin conectar":"Not signed in"}</span>}
       </div>
     </nav>
   );
 }
 
+// ─────────────────────────── HOME ───────────────────────────
 function HomePage({ user, t, onLogin, onCreate, onJoin }) {
   const [code, setCode] = useState("");
   const mobile = useIsMobile();
 
   return (
     <div style={S.homeWrap}>
-      <div style={S.hero}>
-        <div style={{position:"relative"}}>
-          <div style={S.heroBadge}><Coin size={16}/> {t.tagline}</div>
-          <img src={LOGO} alt="BETterviewer" style={{width:"100%",maxWidth:mobile?260:440,margin:"12px auto",display:"block"}} />
-          <img src={COINS_STACK} alt="" style={{width:mobile?140:200,height:"auto",display:"block",margin:"0 auto 8px",filter:"drop-shadow(0 0 24px rgba(145,70,255,0.5))"}} />
-          <p style={{...S.heroSub,whiteSpace:"pre-line"}}>{t.heroSub}</p>
-        </div>
-      </div>
+      <section style={S.hero}>
+        <div style={S.heroBadge}><Coin size={15}/><span>{t.tagline}</span></div>
+        <img src={LOGO} alt="BETterviewer" style={{width:"100%",maxWidth:mobile?250:400,margin:"10px auto -10px",display:"block"}} />
+        <img src={COINS_STACK} alt="" style={{width:mobile?124:162,height:"auto",display:"block",margin:0,filter:"drop-shadow(0 12px 32px rgba(245,185,59,.34))"}} />
+        <p style={S.heroSub}>{t.heroSub}</p>
+      </section>
 
       {!user ? (
         <div style={S.loginBox}>
@@ -474,14 +547,14 @@ function HomePage({ user, t, onLogin, onCreate, onJoin }) {
           <button style={S.twitchBtn} onClick={onLogin}><TwitchSVG />{t.loginTwitch}</button>
         </div>
       ) : (
-        <div style={{...S.cards2, gridTemplateColumns:mobile?"1fr":"1fr 1fr"}}>
+        <div style={{...S.cards2, gridTemplateColumns: mobile?"1fr":"1fr 1fr"}}>
           <div style={S.roleCard}>
-            <img src={IMG_STREAMER} alt="Streamer" style={{width:"100%",maxWidth:mobile?200:280,height:"auto",display:"block",margin:"0 auto 10px"}} />
+            <img src={IMG_STREAMER} alt="Streamer" style={{width:"100%",maxWidth:mobile?196:264,height:"auto",display:"block",margin:"0 auto 4px"}} />
             <p style={S.roleDesc}>{t.streamerDesc}</p>
             <button style={{...S.primaryBtn,width:"100%"}} onClick={onCreate}>{t.createSession}</button>
           </div>
           <div style={S.roleCard}>
-            <img src={IMG_VIEWER} alt="Viewer" style={{width:"100%",maxWidth:mobile?200:280,height:"auto",display:"block",margin:"0 auto 10px"}} />
+            <img src={IMG_VIEWER} alt="Viewer" style={{width:"100%",maxWidth:mobile?196:264,height:"auto",display:"block",margin:"0 auto 4px"}} />
             <p style={S.roleDesc}>{t.viewerDesc}</p>
             <div style={{display:"flex",gap:8,width:"100%"}}>
               <input style={S.codeInput} placeholder={t.codePlaceholder} maxLength={6}
@@ -496,7 +569,8 @@ function HomePage({ user, t, onLogin, onCreate, onJoin }) {
   );
 }
 
-function StreamerDash({ session, user, t, onCreateMarket, onCloseMarket, onReopenMarket, onResolveMarket, onUndoResolve, onCancelBet, onStartLive, onEndSession, onApproveRebuy, onRejectRebuy }) {
+// ─────────────────────── STREAMER DASH ───────────────────────
+function StreamerDash({ session, t, onCreateMarket, onCloseMarket, onReopenMarket, onResolveMarket, onUndoResolve, onCancelBet, onDeleteMarket, onStartLive, onEndSession, onApproveRebuy, onRejectRebuy }) {
   const [tab, setTab]     = useState("markets");
   const [title, setTitle] = useState("");
   const [optOdds, setOptOdds] = useState([
@@ -510,7 +584,7 @@ function StreamerDash({ session, user, t, onCreateMarket, onCloseMarket, onReope
   const rebuys = Object.values(session.rebuyRequests||{})
     .filter(r=>r.status==="pending").sort((a,b)=>a.requestedAt-b.requestedAt);
 
-  function copy(val,key){ navigator.clipboard.writeText(val); setCopied(key); setTimeout(()=>setCopied(""),2000); }
+  function copy(val,key){ navigator.clipboard?.writeText(val); setCopied(key); setTimeout(()=>setCopied(""),1800); }
   function submit(){
     if(!title.trim()) return;
     const valid = optOdds.filter(o=>o.label.trim());
@@ -519,31 +593,32 @@ function StreamerDash({ session, user, t, onCreateMarket, onCloseMarket, onReope
       const v = o.custom ? parseFloat(o.custom) : o.odds;
       if(!v || v < 1.01) return;
     }
-    const options = valid.map(o=>({ label:o.label, odds: o.custom ? parseFloat(o.custom) : o.odds }));
-    onCreateMarket(title, options);
+    const options = valid.map(o=>({ label:o.label.trim(), odds: o.custom ? parseFloat(o.custom) : o.odds }));
+    onCreateMarket(title.trim(), options);
     setTitle("");
     setOptOdds([{label:"Oui",odds:2,custom:""},{label:"Non",odds:3,custom:""}]);
   }
 
   return (
     <div style={S.dashWrap}>
-      <div style={{...S.topBar,flexDirection:mobile?"column":"row"}}>
+      <section style={{...S.topBar, flexDirection: mobile?"column":"row", alignItems: mobile?"stretch":"center"}}>
         <div>
-          <div style={{...S.topCode,fontSize:mobile?"26px":"40px"}}>{session.code}</div>
+          <div style={S.topCodeLabel}>Code de session</div>
+          <div style={{...S.topCode, fontSize: mobile?"34px":"46px"}}>{session.code}</div>
           <div style={S.topMeta}>{participants.length} {t.viewers} · {markets.length} {t.markets.toLowerCase()}</div>
         </div>
-        <div style={{...S.topActions,width:mobile?"100%":"auto"}}>
-          <button style={S.ghostBtn} onClick={()=>copy(session.link,"link")}>{copied==="link"?t.copied:t.copyLink}</button>
-          <button style={S.ghostBtn} onClick={()=>copy(session.code,"code")}>{copied==="code"?t.copied:t.copyCode}</button>
+        <div style={{...S.topActions, justifyContent: mobile?"flex-start":"flex-end"}}>
+          <button style={S.ghostBtn} onClick={()=>copy(session.link,"link")}>{copied==="link"?"✓ "+t.copied:t.copyLink}</button>
+          <button style={S.ghostBtn} onClick={()=>copy(session.code,"code")}>{copied==="code"?"✓ "+t.copied:t.copyCode}</button>
           {session.status==="lobby"&&<button style={S.goLiveBtn} onClick={onStartLive}>{t.goLive}</button>}
           {session.status==="live"&&<button style={S.endBtn} onClick={onEndSession}>{t.endSession}</button>}
         </div>
-      </div>
+      </section>
 
       <div style={S.tabs}>
-        {[["markets",`📊 ${t.markets}`],["create",`➕ ${t.create}`],["rebuy",`💰 ${t.rebuyTab}`],["lb",`🏆 ${t.leaderboard}`]].map(([k,l])=>(
-          <button key={k} style={{...S.tab,...(tab===k?S.tabOn:{})}} onClick={()=>setTab(k)}>
-            {l}
+        {[["markets",t.markets],["create",t.create],["rebuy",t.rebuyTab],["lb",t.leaderboard]].map(([k,l])=>(
+          <button key={k} style={{...S.tab, ...(tab===k?S.tabOn:{})}} onClick={()=>setTab(k)}>
+            <span>{l}</span>
             {k==="rebuy" && rebuys.length>0 && <span style={S.tabDot}>{rebuys.length}</span>}
           </button>
         ))}
@@ -551,68 +626,74 @@ function StreamerDash({ session, user, t, onCreateMarket, onCloseMarket, onReope
 
       {tab==="markets" && (
         <div>
-          {markets.length===0&&<Empty msg={t.noMarket} action={t.noMarketAction} onAction={()=>setTab("create")}/>}
+          {markets.length===0 && <Empty msg={t.noMarket} action={t.noMarketAction} onAction={()=>setTab("create")}/>}
           {markets.map(m=>(
             <AdminMarketCard key={m.id} market={m} session={session} t={t}
               onClose={onCloseMarket} onReopen={onReopenMarket} onResolve={onResolveMarket}
-              onUndo={onUndoResolve} onCancelBet={onCancelBet}/>
+              onUndo={onUndoResolve} onCancelBet={onCancelBet} onDelete={onDeleteMarket}/>
           ))}
         </div>
       )}
 
       {tab==="create" && (
-        <div style={S.card}>
-          <h3 style={S.cardH}>{t.create}</h3>
-          <label style={S.label}>{t.question}</label>
-          <input style={S.input} placeholder={t.questionPlaceholder} value={title} onChange={e=>setTitle(e.target.value)}/>
-          <label style={S.label}>{t.options}</label>
-          {optOdds.map((o,i)=>(
-            <div key={i} style={S.optEditor}>
-              <div style={{display:"flex",gap:8,marginBottom:10}}>
-                <input style={{...S.input,flex:1}} value={o.label} placeholder={`Option ${i+1}`}
-                  onChange={e=>{const a=[...optOdds];a[i]={...a[i],label:e.target.value};setOptOdds(a);}}/>
-                {optOdds.length>2&&<button style={S.rmBtn} onClick={()=>setOptOdds(optOdds.filter((_,j)=>j!==i))}>✕</button>}
+        <div style={S.panel}>
+          <h3 style={S.panelH}>{t.create}</h3>
+          <label style={S.label} htmlFor="mk-title">{t.question}</label>
+          <input id="mk-title" style={S.input} placeholder={t.questionPlaceholder} value={title} onChange={e=>setTitle(e.target.value)}/>
+          <div style={{...S.label, marginTop:22}}>{t.options}</div>
+          {optOdds.map((o,i)=>{
+            const eff = o.custom ? (parseFloat(o.custom)||0) : o.odds;
+            return (
+              <div key={i} style={S.optEditor}>
+                <div style={S.optEditorHead}>
+                  <span style={S.optIndex}>{i+1}</span>
+                  <input style={{...S.input, flex:1}} value={o.label} placeholder={`Option ${i+1}`}
+                    onChange={e=>{const a=[...optOdds];a[i]={...a[i],label:e.target.value};setOptOdds(a);}}/>
+                  {optOdds.length>2 && <button style={S.rmBtn} title="Retirer" onClick={()=>setOptOdds(optOdds.filter((_,j)=>j!==i))}>✕</button>}
+                </div>
+                <div style={S.miniLabel}>{t.odds}</div>
+                <div style={S.chipRow}>
+                  {[1.20,2,3,5].map(v=>(
+                    <button key={v} style={{...S.chipOdds, ...(!o.custom && o.odds===v ? S.chipOddsOn : {})}}
+                      onClick={()=>{const a=[...optOdds];a[i]={...a[i],odds:v,custom:""};setOptOdds(a);}}>
+                      ×{v.toFixed(2)}
+                    </button>
+                  ))}
+                </div>
+                <input style={S.input} type="number" step="0.01" min="1.01" placeholder={t.customOdds+" (1.75…)"}
+                  value={o.custom} onChange={e=>{const a=[...optOdds];a[i]={...a[i],custom:e.target.value};setOptOdds(a);}}/>
+                <div style={S.optPreview}>
+                  {t.example} <b style={{color:"var(--gold)"}}>{fmt(100*eff)}</b> <Coin size={13}/>
+                </div>
               </div>
-              <div style={S.miniLabel}>Cote</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-                {[1.20,2,3,5].map(v=>(
-                  <button key={v} style={{...S.chipOdds,...(!o.custom&&o.odds===v?S.chipOddsOn:{})}}
-                    onClick={()=>{const a=[...optOdds];a[i]={...a[i],odds:v,custom:""};setOptOdds(a);}}>×{v}</button>
-                ))}
-              </div>
-              <input style={S.input} type="number" step="0.01" min="1.01" placeholder="Cote personnalisée (ex: 1.75)"
-                value={o.custom} onChange={e=>{const a=[...optOdds];a[i]={...a[i],custom:e.target.value};setOptOdds(a);}}/>
-              <div style={{fontSize:12,color:"#4ade80",marginTop:6}}>
-                100 misés → <b>{fmt(100*(o.custom?parseFloat(o.custom)||0:o.odds))}</b> coins
-              </div>
-            </div>
-          ))}
-          {optOdds.length<6&&<button style={S.addBtn} onClick={()=>setOptOdds([...optOdds,{label:"",odds:2,custom:""}])}>{t.addOption}</button>}
-          <button style={{...S.primaryBtn,width:"100%",marginTop:18}} onClick={submit}>{t.openMarket}</button>
+            );
+          })}
+          {optOdds.length<6 && <button style={S.addBtn} onClick={()=>setOptOdds([...optOdds,{label:"",odds:2,custom:""}])}>+ {t.addOption}</button>}
+          <button style={{...S.primaryBtn, width:"100%", marginTop:18}} onClick={submit}>{t.openMarket}</button>
         </div>
       )}
 
       {tab==="rebuy" && (
-        <div style={S.card}>
-          <h3 style={S.cardH}>💰 {t.rebuyTab}</h3>
-          <div style={S.rebuyNotice}>{t.rebuyStreamerHint}</div>
+        <div style={S.panel}>
+          <h3 style={S.panelH}>{t.rebuyTab}</h3>
+          <div style={S.notice}>{t.rebuyStreamerHint}</div>
           {rebuys.length===0 && <Empty msg={t.rebuyNone}/>}
           {rebuys.map(r=>{
             const p = session.participants?.[r.login];
             return (
               <div key={r.login} style={S.rebuyRow}>
-                <img src={r.avatar} style={S.lbAva} alt="" onError={e=>e.target.style.display="none"}/>
-                <div style={{flex:1,minWidth:0}}>
+                <img src={r.avatar} style={S.lbAva} alt="" onError={e=>{e.target.style.visibility="hidden";}}/>
+                <div style={{flex:1, minWidth:0}}>
                   <div style={S.rebuyName}>{r.displayName}</div>
                   <div style={S.rebuySub}>
-                    {t.rebuyCount}: {p?.rebuys||0} ·{" "}
-                    <a href={`https://twitch.tv/${r.login}`} target="_blank" rel="noreferrer" style={{color:"#c4b5fd"}}>
+                    {t.rebuyCount} : {p?.rebuys||0} ·{" "}
+                    <a href={`https://twitch.tv/${r.login}`} target="_blank" rel="noreferrer" style={S.link}>
                       twitch.tv/{r.login}
                     </a>
                   </div>
                 </div>
-                <div style={{display:"flex",gap:6,flexShrink:0}}>
-                  <button style={S.resolveBtn} onClick={()=>onApproveRebuy(r.login)}>✓ {t.rebuyApprove}</button>
+                <div style={{display:"flex", gap:6, flexShrink:0}}>
+                  <button style={S.approveBtn} onClick={()=>onApproveRebuy(r.login)}>{t.rebuyApprove}</button>
                   <button style={S.rmBtn} onClick={()=>onRejectRebuy(r.login)}>✕</button>
                 </div>
               </div>
@@ -621,36 +702,42 @@ function StreamerDash({ session, user, t, onCreateMarket, onCloseMarket, onReope
         </div>
       )}
 
-      {tab==="lb"&&<Leaderboard participants={participants} t={t}/>}
+      {tab==="lb" && <Leaderboard participants={participants} t={t}/>}
     </div>
   );
 }
 
-function AdminMarketCard({ market, session, t, onClose, onReopen, onResolve, onUndo, onCancelBet }) {
+function AdminMarketCard({ market, session, t, onClose, onReopen, onResolve, onUndo, onCancelBet, onDelete }) {
   const [showBets, setShowBets] = useState(false);
+  const [confirmDel, setConfirmDel] = useState(false);
   const opts = Object.values(market.options||{});
   const allBets = [];
   opts.forEach(o => Object.entries(o.bettors||{}).forEach(([login,amount]) =>
     allBets.push({ login, amount, optLabel:o.label, optId:o.id })));
+  const grandTotal = allBets.reduce((s,b)=>s+b.amount,0);
 
   return (
-    <div style={S.mCard}>
-      <div style={S.mHeader}>
+    <article style={S.mCard}>
+      <header style={S.mHeader}>
         <span style={S.mTitle}>{market.title}</span>
         <StatusBadge status={market.status} t={t}/>
-      </div>
+      </header>
       <div style={S.mBody}>
         <div style={S.oddsGrid}>
           {opts.map(opt=>{
             const optOdds = opt.odds || 2;
             const betCount = Object.keys(opt.bettors||{}).length;
             const totalBet = Object.values(opt.bettors||{}).reduce((s,v)=>s+v,0);
+            const share = grandTotal>0 ? Math.round(totalBet/grandTotal*100) : 0;
             const isWin = market.winner===opt.id;
             return (
-              <div key={opt.id} style={{...S.oddsBtn,...(isWin?S.oddsBtnWin:{})}}>
-                <div style={S.oddsLabel}>{opt.label}{isWin?" 🏆":""}</div>
-                <div style={S.oddsValue}>{optOdds.toFixed(2)}</div>
-                <div style={S.oddsMeta}>{fmt(totalBet)} · {betCount}</div>
+              <div key={opt.id} style={{...S.oddsTile, ...(isWin?S.oddsTileWin:{})}}>
+                <div style={S.oddsLabel}>{opt.label}</div>
+                <div style={{...S.oddsValue, ...(isWin?{color:"var(--green)"}:{})}}>{optOdds.toFixed(2)}</div>
+                <div style={S.oddsBarTrack}>
+                  <div style={{...S.oddsBarFill, width:`${share}%`, background: isWin?"var(--green)":"var(--gold)"}}/>
+                </div>
+                <div style={S.oddsMeta}>{fmtInt(totalBet)} {t.totalStaked} · {betCount}</div>
               </div>
             );
           })}
@@ -660,21 +747,30 @@ function AdminMarketCard({ market, session, t, onClose, onReopen, onResolve, onU
           <button style={S.linkBtn} onClick={()=>setShowBets(v=>!v)}>
             {showBets?"▾":"▸"} {t.manageBets} ({allBets.length})
           </button>
-          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-            {market.status==="open"&&<button style={S.closeBtn} onClick={()=>onClose(market.id)}>{t.closeBets}</button>}
-            {market.status==="closed"&&(
+          <div style={S.mActions}>
+            {market.status==="open" && <button style={S.warnBtn} onClick={()=>onClose(market.id)}>{t.closeBets}</button>}
+            {market.status==="closed" && (
               <>
-                <button style={S.ghostBtnSm} onClick={()=>onReopen(market.id)}>↺ {t.open}</button>
+                <button style={S.ghostBtnSm} onClick={()=>onReopen(market.id)}>{t.reopen}</button>
                 {opts.map(opt=>(
-                  <button key={opt.id} style={S.resolveBtn} onClick={()=>onResolve(market.id,opt.id)}>✓ {opt.label}</button>
+                  <button key={opt.id} style={S.approveBtn} onClick={()=>onResolve(market.id,opt.id)}>✓ {opt.label}</button>
                 ))}
               </>
             )}
-            {market.status==="resolved"&&(
-              <button style={S.undoBtn} onClick={()=>onUndo(market.id)}>{t.undoResolve}</button>
-            )}
+            {market.status==="resolved" && <button style={S.ghostBtnSm} onClick={()=>onUndo(market.id)}>↩ {t.undoResolve}</button>}
+            <button style={S.dangerBtn} onClick={()=>setConfirmDel(true)}>{t.deleteMarket}</button>
           </div>
         </div>
+
+        {confirmDel && (
+          <div style={S.confirmBox}>
+            <span style={S.confirmTxt}>{t.confirmDelete}</span>
+            <div style={{display:"flex",gap:8,flexShrink:0}}>
+              <button style={S.ghostBtnSm} onClick={()=>setConfirmDel(false)}>Annuler</button>
+              <button style={S.dangerSolid} onClick={()=>{setConfirmDel(false); onDelete(market.id);}}>{t.deleteMarket}</button>
+            </div>
+          </div>
+        )}
 
         {showBets && (
           <div style={S.betsList}>
@@ -683,21 +779,22 @@ function AdminMarketCard({ market, session, t, onClose, onReopen, onResolve, onU
               const p = session.participants?.[b.login];
               return (
                 <div key={b.login+b.optId} style={S.betRow}>
-                  <img src={p?.avatar} style={S.betAva} alt="" onError={e=>e.target.style.display="none"}/>
+                  <img src={p?.avatar} style={S.betAva} alt="" onError={e=>{e.target.style.visibility="hidden";}}/>
                   <span style={S.betName}>{p?.displayName||b.login}</span>
                   <span style={S.betOpt}>{b.optLabel}</span>
-                  <span style={S.betAmt}>{fmt(b.amount)} <Coin size={12}/></span>
-                  <button style={S.rmBtnSm} title={t.cancelThisBet} onClick={()=>onCancelBet(market.id,b.login,true)}>✕</button>
+                  <span style={S.betAmt}>{fmtInt(b.amount)}<Coin size={12}/></span>
+                  <button style={S.rmBtnSm} title={t.cancelBet} onClick={()=>onCancelBet(market.id,b.login,true)}>✕</button>
                 </div>
               );
             })}
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
+// ──────────────────────── VIEWER DASH ────────────────────────
 function ViewerDash({ session, user, t, onBet, onCancelBet, onRequestRebuy }) {
   const [tab, setTab] = useState("markets");
   const mobile = useIsMobile();
@@ -715,56 +812,61 @@ function ViewerDash({ session, user, t, onBet, onCancelBet, onRequestRebuy }) {
 
   return (
     <div style={S.dashWrap}>
-      <div style={{...S.viewerTopBar,flexDirection:mobile?"column":"row"}}>
+      <section style={{...S.viewerBar, flexDirection: mobile?"column":"row"}}>
         <div style={S.viewerLeft}>
           <img src={user.avatar} style={S.bigAva} alt=""/>
-          <div>
+          <div style={{minWidth:0}}>
             <div style={S.viewerName}>{user.displayName}</div>
-            <div style={S.viewerSub}>{t.sessionOf} <b>{session.streamerName}</b></div>
+            <div style={S.viewerSub}>{t.sessionOf} <b style={{color:"var(--ink)"}}>{session.streamerName}</b></div>
           </div>
         </div>
-        <div style={{...S.statsRow,width:mobile?"100%":"auto",justifyContent:mobile?"space-around":"flex-end"}}>
-          <Stat val={<span>{fmt(me?.balance??STARTING_BALANCE)} <Coin size={18}/></span>} label={t.balance} accent/>
+        <div style={{...S.statsRow, width: mobile?"100%":"auto"}}>
+          <div style={S.balanceBox}>
+            <div style={S.statLab}>{t.balance}</div>
+            <div style={S.balanceVal}>{fmtInt(me?.balance ?? STARTING_BALANCE)}<Coin size={20}/></div>
+          </div>
+          <div style={S.statDivider}/>
           <Stat val={`#${rank}`} label={t.rank}/>
+          <div style={S.statDivider}/>
           <Stat val={participants.length} label={t.players}/>
         </div>
-      </div>
+      </section>
 
-      {session.status==="lobby"&&<div style={S.lobbyBanner}>⏳ {t.waitingLobby}</div>}
+      {session.status==="lobby" && <div style={S.lobbyBanner}><span style={S.lobbyPulse}/>{t.waitingLobby}</div>}
 
       {session.status!=="ended" && isBroke && (
         <div style={S.rebuyBox}>
           {rebuyStatus==="pending" ? (
             <>
-              <div style={S.rebuyTitle}>⏳ {t.rebuyPending}</div>
+              <div style={S.rebuyTitle}>{t.rebuyPending}</div>
               <div style={S.rebuyHint}>{t.rebuyPendingHint}</div>
             </>
           ) : (
             <>
-              <div style={S.rebuyTitle}>💀 {t.rebuyBroke}</div>
-              <div style={S.rebuyHint}>{t.rebuyHint.replace("{n}", fmt(REBUY_AMOUNT))}</div>
-              <button style={{...S.primaryBtn,marginTop:12,width:"100%"}} onClick={onRequestRebuy}>{t.rebuyAsk}</button>
+              <div style={S.rebuyTitle}>{t.rebuyBroke}</div>
+              <div style={S.rebuyHint}>{t.rebuyHint.replace("{n}", fmtInt(REBUY_AMOUNT))}</div>
+              <button style={{...S.primaryBtn, marginTop:14, width:"100%"}} onClick={onRequestRebuy}>{t.rebuyAsk}</button>
             </>
           )}
         </div>
       )}
 
       <div style={S.tabs}>
-        {[["markets",`📊 ${t.bets}`],["lb",`🏆 ${t.leaderboard}`]].map(([k,l])=>(
-          <button key={k} style={{...S.tab,...(tab===k?S.tabOn:{})}} onClick={()=>setTab(k)}>{l}</button>
+        {[["markets",t.bets],["lb",t.leaderboard]].map(([k,l])=>(
+          <button key={k} style={{...S.tab, ...(tab===k?S.tabOn:{})}} onClick={()=>setTab(k)}>{l}</button>
         ))}
       </div>
 
-      {tab==="markets"&&(
+      {tab==="markets" && (
         <div>
-          {markets.length===0&&<Empty msg={t.noMarket}/>}
+          {markets.length===0 && <Empty msg={t.noMarket}/>}
           {markets.map(m=>(
             <ViewerMarketCard key={m.id} market={m} user={user} balance={me?.balance??0} t={t}
               onBet={onBet} onCancelBet={onCancelBet}/>
           ))}
         </div>
       )}
-      {tab==="lb"&&<Leaderboard participants={participants} highlightLogin={user.login} t={t}/>}
+      {tab==="lb" && <Leaderboard participants={participants} highlightLogin={user.login} t={t}/>}
     </div>
   );
 }
@@ -776,38 +878,44 @@ function ViewerMarketCard({ market, user, balance, t, onBet, onCancelBet }) {
   const myBetOpt = opts.find(o=>o.bettors?.[user.login]);
   const canBet = market.status==="open" && !myBetOpt;
   const myBetAmount = myBetOpt ? (myBetOpt.bettors[user.login]||0) : 0;
-  const selOdds = sel ? (opts.find(o=>o.id===sel)?.odds || 2) : 0;
+  const selOdds = sel ? (opts.find(o=>o.id===sel)?.odds || 0) : 0;
   const stake = parseFloat(amount)||0;
+  const tooMuch = stake > balance;
 
   function submit(){
-    if(!sel||!stake||stake<=0) return;
-    onBet(market.id,sel,stake); setSel(null); setAmount("");
+    if(!sel || !stake || stake<=0 || tooMuch) return;
+    onBet(market.id, sel, stake); setSel(null); setAmount("");
   }
 
   return (
-    <div style={S.mCard}>
-      <div style={S.mHeader}>
+    <article style={S.mCard}>
+      <header style={S.mHeader}>
         <span style={S.mTitle}>{market.title}</span>
         <StatusBadge status={market.status} t={t}/>
-      </div>
+      </header>
       <div style={S.mBody}>
         <div style={S.oddsGrid}>
           {opts.map(opt=>{
-            const isMine=myBetOpt?.id===opt.id;
-            const isWin=market.winner===opt.id;
+            const isMine = myBetOpt?.id===opt.id;
+            const isWin  = market.winner===opt.id;
             const optOdds = opt.odds || 2;
+            const isSel = sel===opt.id;
             return (
-              <div key={opt.id}
-                style={{...S.oddsBtn,
-                  ...(sel===opt.id?S.oddsBtnSel:{}),
-                  ...(isMine?S.oddsBtnMine:{}),
-                  ...(isWin?S.oddsBtnWin:{}),
-                  cursor:canBet?"pointer":"default"}}
-                onClick={()=>canBet&&setSel(sel===opt.id?null:opt.id)}>
-                <div style={S.oddsLabel}>{opt.label}{isWin?" 🏆":""}</div>
-                <div style={S.oddsValue}>{optOdds.toFixed(2)}</div>
-                {isMine && <div style={S.oddsMine}>{t.myBet} · {fmt(myBetAmount)}</div>}
-              </div>
+              <button key={opt.id} disabled={!canBet}
+                className={canBet?"odds-live":""}
+                style={{...S.oddsTile,
+                  ...(isSel?S.oddsTileSel:{}),
+                  ...(isMine?S.oddsTileMine:{}),
+                  ...(isWin?S.oddsTileWin:{}),
+                  cursor: canBet?"pointer":"default"}}
+                onClick={()=>canBet && setSel(isSel?null:opt.id)}>
+                <div style={S.oddsLabel}>{opt.label}</div>
+                <div style={{...S.oddsValue, ...(isWin?{color:"var(--green)"}:isSel?{color:"var(--ink)"}:{})}}>
+                  {optOdds.toFixed(2)}
+                </div>
+                {isMine && <div style={S.oddsMineTag}>{t.myBet} · {fmtInt(myBetAmount)}</div>}
+                {isWin && !isMine && <div style={{...S.oddsMineTag, color:"var(--green)"}}>✓</div>}
+              </button>
             );
           })}
         </div>
@@ -820,17 +928,19 @@ function ViewerMarketCard({ market, user, balance, t, onBet, onCancelBet }) {
               <>
                 <div style={S.slipTop}>
                   <span style={S.slipLabel}>{t.stake}</span>
-                  <span style={S.slipWin}>{t.potential} : <b>{fmt(stake*selOdds)}</b> <Coin size={13}/></span>
+                  <span style={S.slipWin}>{t.potential} <b>{fmt(stake*selOdds)}</b><Coin size={13}/></span>
                 </div>
-                <input style={S.input} type="number" min="1" max={balance} placeholder={`max ${fmt(balance)}`}
-                  value={amount} onChange={e=>setAmount(e.target.value)}/>
-                <div style={{display:"flex",gap:6,marginTop:8}}>
+                <input style={{...S.input, ...(tooMuch?S.inputErr:{})}} type="number" min="1" max={balance}
+                  placeholder={`max ${fmtInt(balance)}`} value={amount} onChange={e=>setAmount(e.target.value)}/>
+                <div style={S.quickRow}>
                   {[10,50,100,250].map(v=>(
-                    <button key={v} style={{...S.quickBtn,flex:1}} onClick={()=>setAmount(String(Math.min(v,balance)))}>{v}</button>
+                    <button key={v} style={S.quickBtn} disabled={v>balance}
+                      onClick={()=>setAmount(String(Math.min(v,balance)))}>{v}</button>
                   ))}
-                  <button style={{...S.quickBtn,flex:1}} onClick={()=>setAmount(String(balance))}>MAX</button>
+                  <button style={{...S.quickBtn, ...S.quickBtnMax}} onClick={()=>setAmount(String(Math.floor(balance)))}>MAX</button>
                 </div>
-                <button style={{...S.primaryBtn,width:"100%",marginTop:10}} onClick={submit}>{t.bet}</button>
+                <button style={{...S.primaryBtn, width:"100%", marginTop:10, ...(tooMuch||!stake?S.btnDisabled:{})}}
+                  disabled={tooMuch||!stake} onClick={submit}>{t.bet}</button>
               </>
             )}
           </div>
@@ -838,31 +948,39 @@ function ViewerMarketCard({ market, user, balance, t, onBet, onCancelBet }) {
 
         {myBetOpt && (
           <div style={S.myBetNote}>
-            <span>{t.myBet} : <b>{fmt(myBetAmount)}</b> <Coin size={12}/> → <b>{myBetOpt.label}</b></span>
+            <span>{t.myBet} · <b style={{color:"var(--gold)"}}>{fmtInt(myBetAmount)}</b><Coin size={12}/> → <b>{myBetOpt.label}</b></span>
             {market.status==="open" && (
               <button style={S.cancelBtn} onClick={()=>onCancelBet(market.id,user.login,false)}>{t.cancelBet}</button>
             )}
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
 }
 
+// ─────────────────────── LEADERBOARD ───────────────────────
 function Leaderboard({ participants, highlightLogin, t }) {
   return (
-    <div style={S.card}>
-      <h3 style={S.cardH}>🏆 {t.leaderboard}</h3>
+    <div style={S.panel}>
+      <h3 style={S.panelH}>{t.leaderboard}</h3>
+      <div style={S.lbHead}>
+        <span style={{width:34}}/>
+        <span style={{flex:1}}/>
+        <span style={S.lbHeadCell}>{t.balance}</span>
+        <span style={{...S.lbHeadCell, minWidth:66, textAlign:"right"}}>{t.lastBet}</span>
+      </div>
       {participants.map((p,i)=>{
         const lr = p.lastResult;
+        const medal = i===0?"var(--gold)":i===1?"#c3cde0":i===2?"#c98b52":null;
         return (
-          <div key={p.login} style={{...S.lbRow,...(p.login===highlightLogin?S.lbMe:{})}}>
-            <span style={S.lbRank}>{i===0?"🥇":i===1?"🥈":i===2?"🥉":`#${i+1}`}</span>
-            <img src={p.avatar} style={S.lbAva} alt="" onError={e=>e.target.style.display="none"}/>
+          <div key={p.login} style={{...S.lbRow, ...(p.login===highlightLogin?S.lbMe:{})}}>
+            <span style={{...S.lbRank, ...(medal?{color:medal, fontWeight:900}:{})}}>{i+1}</span>
+            <img src={p.avatar} style={S.lbAva} alt="" onError={e=>{e.target.style.visibility="hidden";}}/>
             <span style={S.lbName}>{p.displayName}</span>
-            <span style={S.lbBal}>{fmt(p.balance)} <Coin size={14}/></span>
-            <span style={{...S.lbLast, color: !lr ? "#4b5563" : lr.net>=0 ? "#4ade80" : "#f87171"}}>
-              {!lr ? t.noLastBet : `${lr.net>=0?"+":"−"}${fmt(Math.abs(lr.net))}`}
+            <span style={S.lbBal}>{fmtInt(p.balance)}<Coin size={13}/></span>
+            <span style={{...S.lbLast, color: !lr ? "var(--muted)" : lr.net>=0 ? "var(--green)" : "var(--red)"}}>
+              {!lr ? t.noLastBet : `${lr.net>=0?"+":"−"}${fmtInt(Math.abs(lr.net))}`}
             </span>
           </div>
         );
@@ -878,274 +996,389 @@ function ResultsPage({ session, user, t, onHome }) {
   return (
     <div style={S.resultsWrap}>
       <h1 style={S.resTitle}>{t.streamEnded}</h1>
-      <p style={S.resSub}>{session.code} · {sorted.length} {t.players}</p>
-      {winner&&(
+      <p style={S.resSub}>{session.code} · {sorted.length} {t.players.toLowerCase()}</p>
+      {winner && (
         <div style={S.winCard}>
-          <div style={{fontSize:48,marginBottom:8}}>👑</div>
+          <div style={S.crown}>♛</div>
           <img src={winner.avatar} style={S.winAva} alt=""/>
           <div style={S.winName}>{winner.displayName}</div>
-          <div style={S.winBal}>{fmt(winner.balance)} <Coin size={28}/></div>
+          <div style={S.winBal}>{fmtInt(winner.balance)}<Coin size={26}/></div>
           <div style={S.winLabel}>{t.winner}</div>
         </div>
       )}
-      {myRank>0&&<p style={S.myRank}>{t.myRank} : <b style={{color:"#c4b5fd"}}>#{myRank}</b> / {sorted.length}</p>}
-      <div style={{maxWidth:520,margin:"24px auto"}}><Leaderboard participants={sorted} highlightLogin={user?.login} t={t}/></div>
-      <button style={{...S.primaryBtn,margin:"0 auto 60px",display:"block"}} onClick={onHome}>{t.backHome}</button>
+      {myRank>0 && <p style={S.myRank}>{t.myRank} · <b style={{color:"var(--gold)"}}>#{myRank}</b> / {sorted.length}</p>}
+      <div style={{maxWidth:540, margin:"22px auto"}}>
+        <Leaderboard participants={sorted} highlightLogin={user?.login} t={t}/>
+      </div>
+      <button style={{...S.primaryBtn, margin:"0 auto 60px", display:"block"}} onClick={onHome}>{t.backHome}</button>
     </div>
   );
 }
 
+// ─────────────────────── PRIMITIVES ───────────────────────
 function StatusBadge({ status, t }) {
-  if (status==="open")     return <span style={S.badgeOpen}>● {t.open}</span>;
-  if (status==="closed")   return <span style={S.badgeClosed}>⏸ {t.closed}</span>;
-  if (status==="resolved") return <span style={S.badgeResolved}>✓ {t.resolved}</span>;
+  if (status==="open")     return <span style={{...S.badge, ...S.badgeOpen}}><span style={S.badgeDot}/>{t.open}</span>;
+  if (status==="closed")   return <span style={{...S.badge, ...S.badgeClosed}}>{t.closed}</span>;
+  if (status==="resolved") return <span style={{...S.badge, ...S.badgeResolved}}>{t.resolved}</span>;
   return null;
 }
-function Stat({ val, label, accent }) {
-  return <div style={S.statBox}><div style={{...S.statVal,...(accent?{color:"#c4b5fd"}:{})}}>{val}</div><div style={S.statLab}>{label}</div></div>;
+function Stat({ val, label }) {
+  return <div style={S.statBox}><div style={S.statVal}>{val}</div><div style={S.statLab}>{label}</div></div>;
 }
 function Empty({ msg, action, onAction }) {
-  return <div style={S.empty}>{msg}{action&&<span style={S.emptyLink} onClick={onAction}> {action}</span>}</div>;
+  return <div style={S.empty}>{msg}{action && <span style={S.emptyLink} onClick={onAction}> {action}</span>}</div>;
 }
 function Loader() { return <div style={S.loader}><span className="spin">◈</span></div>; }
 function ErrorBanner({ msg, onDismiss }) {
-  return <div style={S.errBanner}>⚠ {msg} <button style={S.errClose} onClick={onDismiss}>✕</button></div>;
+  return <div style={S.errBanner}><span>{msg}</span><button style={S.errClose} onClick={onDismiss}>✕</button></div>;
 }
 function Coin({ size=16 }) {
-  return <img src={COIN} alt="" style={{width:size,height:size,objectFit:"contain",verticalAlign:"middle",marginLeft:3,display:"inline"}} />;
+  return <img src={COIN} alt="" style={{width:size,height:size,objectFit:"contain",verticalAlign:"-0.14em",marginLeft:4,display:"inline-block"}} />;
 }
 function TwitchSVG() {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="white" style={{marginRight:8,flexShrink:0}}>
+  return <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{marginRight:9,flexShrink:0}}>
     <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/>
   </svg>;
 }
 
+// ─────────────────────────── STYLES ───────────────────────────
 const S = {
-  root:{ minHeight:"100vh", background:"#050b24", color:"#eef0ff", fontFamily:"'Syne','Trebuchet MS',sans-serif", position:"relative" },
+  root:{ minHeight:"100vh", background:"var(--bg)", color:"var(--ink)", fontFamily:"var(--font-body)", position:"relative" },
   bgGlow:{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0,
-    background:"radial-gradient(1000px 600px at 50% -10%, #17307a 0%, #0b1740 42%, #050b24 100%)" },
+    background:"radial-gradient(1200px 700px at 50% -6%, #24357a 0%, #14215a 30%, #0a1233 58%, var(--bg) 85%)" },
+  bgGrid:{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, opacity:.5,
+    backgroundImage:"linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px)",
+    backgroundSize:"58px 58px",
+    maskImage:"radial-gradient(760px 460px at 50% 0%, #000 0%, transparent 72%)",
+    WebkitMaskImage:"radial-gradient(760px 460px at 50% 0%, #000 0%, transparent 72%)" },
 
-  nav:{ display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:"1px solid rgba(255,255,255,.08)",
-    background:"rgba(5,11,36,.88)", position:"sticky", top:0, zIndex:100, backdropFilter:"blur(16px)", gap:12, flexWrap:"wrap" },
+  nav:{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap",
+    borderBottom:"1px solid var(--line)", background:"rgba(6,11,31,.9)", backdropFilter:"blur(18px)",
+    position:"sticky", top:0, zIndex:60 },
   navBrand:{ display:"flex", alignItems:"center", gap:12, cursor:"pointer" },
-  sessionPill:{ display:"flex", alignItems:"center", gap:6, fontSize:11, background:"rgba(255,255,255,.07)",
-    border:"1px solid rgba(255,255,255,.1)", padding:"3px 12px", borderRadius:20, color:"#b6c0e6", letterSpacing:"0.06em" },
-  liveDot:{ width:7, height:7, borderRadius:"50%", background:"#4ade80", boxShadow:"0 0 8px #4ade80", display:"inline-block" },
+  sessionPill:{ display:"flex", alignItems:"center", gap:8, padding:"5px 12px", borderRadius:8,
+    background:"var(--surface-2)", border:"1px solid var(--line)" },
+  sessionPillState:{ fontSize:10, fontWeight:800, letterSpacing:".12em", color:"var(--muted)" },
+  sessionPillSep:{ width:1, height:11, background:"var(--line-strong)" },
+  sessionPillCode:{ fontFamily:"var(--font-mono)", fontWeight:800, fontSize:12, color:"var(--gold)", letterSpacing:".1em" },
+  liveDot:{ width:7, height:7, borderRadius:"50%", background:"var(--green)", boxShadow:"0 0 9px var(--green)" },
   navRight:{ display:"flex", alignItems:"center", gap:8 },
-  navBtn:{ background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.14)", color:"#eef0ff",
-    padding:"7px 15px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600 },
-  langBtn:{ background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.14)", color:"#eef0ff",
-    padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 },
-  userChip:{ display:"flex", alignItems:"center", gap:8, background:"rgba(255,255,255,.08)",
-    border:"1px solid rgba(255,255,255,.14)", borderRadius:24, padding:"3px 10px 3px 3px" },
-  ava:{ width:30, height:30, borderRadius:"50%", objectFit:"cover", border:"2px solid #9146ff" },
-  uname:{ fontSize:13, fontWeight:700 },
-  logoutBtn:{ background:"none", border:"none", color:"#8e9ac4", cursor:"pointer", fontSize:15, padding:0 },
-  guestTxt:{ fontSize:13, color:"#6b7aa8" },
+  navBtn:{ background:"var(--surface-2)", border:"1px solid var(--line-strong)", color:"var(--ink)",
+    padding:"8px 15px", borderRadius:9, cursor:"pointer", fontSize:12.5, fontWeight:700,
+    fontFamily:"var(--font-body)", letterSpacing:".01em" },
+  langBtn:{ display:"flex", alignItems:"center", gap:6, background:"var(--surface-2)",
+    border:"1px solid var(--line-strong)", color:"var(--ink)", padding:"8px 11px", borderRadius:9,
+    cursor:"pointer", fontSize:12, fontWeight:800, fontFamily:"var(--font-body)", letterSpacing:".04em" },
+  caret:{ fontSize:9, color:"var(--muted)", transition:"transform .18s ease" },
+  langMenu:{ position:"absolute", top:"calc(100% + 7px)", right:0, minWidth:172, zIndex:80,
+    background:"var(--surface-hi)", border:"1px solid var(--line-strong)", borderRadius:12, padding:5,
+    boxShadow:"0 18px 44px rgba(0,0,0,.55)" },
+  langItem:{ display:"flex", alignItems:"center", gap:10, width:"100%", background:"none", border:"none",
+    color:"var(--ink-dim)", padding:"10px 11px", borderRadius:8, cursor:"pointer", fontSize:13,
+    fontWeight:600, fontFamily:"var(--font-body)" },
+  langItemOn:{ background:"rgba(245,185,59,.12)", color:"var(--ink)" },
+  userChip:{ display:"flex", alignItems:"center", gap:9, background:"var(--surface-2)",
+    border:"1px solid var(--line-strong)", borderRadius:26, padding:"3px 11px 3px 3px" },
+  ava:{ width:29, height:29, borderRadius:"50%", objectFit:"cover", border:"2px solid var(--violet)" },
+  uname:{ fontSize:12.5, fontWeight:700 },
+  logoutBtn:{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:14, padding:0, lineHeight:1 },
+  guestTxt:{ fontSize:12.5, color:"var(--muted)" },
 
-  main:{ maxWidth:1000, margin:"0 auto", padding:"clamp(16px,4vw,36px) clamp(12px,3vw,20px)", position:"relative", zIndex:1 },
+  main:{ maxWidth:1000, margin:"0 auto", padding:"clamp(18px,4vw,36px) clamp(16px,3vw,22px)", position:"relative", zIndex:1 },
 
   homeWrap:{ maxWidth:720, margin:"0 auto" },
-  hero:{ position:"relative", textAlign:"center", padding:"36px 16px 28px" },
-  heroBadge:{ display:"inline-flex", alignItems:"center", gap:4, fontSize:12, background:"rgba(145,70,255,.16)",
-    border:"1px solid rgba(145,70,255,.38)", color:"#c4b5fd", padding:"6px 16px", borderRadius:20, letterSpacing:"0.04em" },
-  heroSub:{ fontSize:15, color:"#9aa6d0", lineHeight:1.7, margin:"12px 0 0" },
-  loginBox:{ textAlign:"center", padding:"28px 0" },
-  loginHint:{ color:"#9aa6d0", fontSize:14, marginBottom:20 },
-  twitchBtn:{ display:"inline-flex", alignItems:"center", background:"#9146ff", color:"#fff", border:"none",
-    borderRadius:10, padding:"14px 32px", fontSize:15, fontWeight:800, cursor:"pointer",
-    boxShadow:"0 8px 24px rgba(145,70,255,.35)" },
+  hero:{ textAlign:"center", padding:"26px 0 22px", display:"flex", flexDirection:"column", alignItems:"center", gap:2 },
+  heroBadge:{ display:"inline-flex", alignItems:"center", gap:7, fontSize:11.5, fontWeight:700,
+    background:"rgba(245,185,59,.1)", border:"1px solid rgba(245,185,59,.32)", color:"var(--gold)",
+    padding:"7px 15px", borderRadius:22, letterSpacing:".05em" },
+  heroSub:{ fontSize:15, color:"var(--ink-dim)", lineHeight:1.75, margin:"18px auto 0", maxWidth:430, whiteSpace:"pre-line" },
+  loginBox:{ textAlign:"center", padding:"22px 0 40px" },
+  loginHint:{ color:"var(--ink-dim)", fontSize:14, marginBottom:20 },
+  twitchBtn:{ display:"inline-flex", alignItems:"center", background:"var(--violet)", color:"#fff", border:"none",
+    borderRadius:11, padding:"15px 34px", fontSize:14.5, fontWeight:800, cursor:"pointer",
+    fontFamily:"var(--font-body)", letterSpacing:".02em", boxShadow:"0 12px 30px rgba(124,58,237,.34)" },
 
   cards2:{ display:"grid", gap:18, alignItems:"stretch" },
-  roleCard:{ background:"rgba(16,28,66,.72)", border:"1px solid rgba(255,255,255,.1)", borderRadius:16, padding:22,
-    display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"space-between", gap:12,
-    boxShadow:"0 10px 30px rgba(0,0,0,.28)" },
-  roleDesc:{ fontSize:13, color:"#9aa6d0", lineHeight:1.6, textAlign:"center", margin:0, flex:1 },
-  primaryBtn:{ background:"linear-gradient(135deg,#7c3aed,#a855f7)", border:"none", color:"#fff", borderRadius:10,
-    padding:"12px 24px", fontSize:14, fontWeight:800, cursor:"pointer", boxShadow:"0 6px 18px rgba(124,58,237,.35)" },
-  codeInput:{ background:"rgba(255,255,255,.07)", border:"1px solid rgba(255,255,255,.16)", borderRadius:10, color:"#eef0ff",
-    padding:"12px 14px", fontSize:17, fontFamily:"'DM Mono',monospace", letterSpacing:"0.18em", outline:"none",
-    flex:1, minWidth:0, textTransform:"uppercase" },
-  joinBtn:{ background:"#9146ff", border:"none", color:"#fff", borderRadius:10, padding:"12px 20px",
-    cursor:"pointer", fontWeight:900, fontSize:15 },
+  roleCard:{ background:"var(--surface)", border:"1px solid var(--line)", borderRadius:18, padding:22,
+    display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"space-between", gap:14,
+    boxShadow:"var(--shadow)" },
+  roleDesc:{ fontSize:13, color:"var(--ink-dim)", lineHeight:1.65, textAlign:"center", margin:0, flex:1 },
 
-  dashWrap:{ maxWidth:760, margin:"0 auto" },
-  topBar:{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(16,28,66,.72)",
-    border:"1px solid rgba(255,255,255,.1)", borderRadius:16, padding:"20px 24px", marginBottom:20, gap:16,
-    boxShadow:"0 10px 30px rgba(0,0,0,.28)" },
-  topCode:{ fontWeight:900, color:"#c4b5fd", fontFamily:"'DM Mono',monospace", letterSpacing:"0.18em" },
-  topMeta:{ fontSize:13, color:"#8e9ac4", marginTop:4 },
-  topActions:{ display:"flex", gap:8, flexWrap:"wrap" },
-  ghostBtn:{ background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.16)", color:"#dfe4f7",
-    padding:"9px 15px", borderRadius:9, cursor:"pointer", fontSize:12, fontWeight:600 },
-  ghostBtnSm:{ background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.18)", color:"#dfe4f7",
-    padding:"7px 13px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600 },
-  goLiveBtn:{ background:"#16a34a", border:"none", color:"#fff", padding:"9px 18px", borderRadius:9,
-    cursor:"pointer", fontSize:13, fontWeight:800, boxShadow:"0 6px 16px rgba(22,163,74,.3)" },
-  endBtn:{ background:"#dc2626", border:"none", color:"#fff", padding:"9px 18px", borderRadius:9,
-    cursor:"pointer", fontSize:13, fontWeight:800, boxShadow:"0 6px 16px rgba(220,38,38,.3)" },
+  primaryBtn:{ background:"linear-gradient(180deg,#8b5cf6,#6d28d9)", border:"none", color:"#fff", borderRadius:11,
+    padding:"13px 24px", fontSize:13.5, fontWeight:800, cursor:"pointer", fontFamily:"var(--font-body)",
+    letterSpacing:".02em", boxShadow:"0 8px 22px rgba(109,40,217,.38)" },
+  btnDisabled:{ opacity:.42, cursor:"not-allowed", boxShadow:"none" },
+  codeInput:{ flex:1, minWidth:0, background:"var(--field)", border:"1px solid var(--line-strong)", borderRadius:11,
+    color:"var(--ink)", padding:"13px 15px", fontSize:17, fontFamily:"var(--font-mono)", fontWeight:700,
+    letterSpacing:".22em", outline:"none", textTransform:"uppercase" },
+  joinBtn:{ background:"var(--gold)", border:"none", color:"#1a1206", borderRadius:11, padding:"13px 21px",
+    cursor:"pointer", fontWeight:900, fontSize:14, fontFamily:"var(--font-body)", letterSpacing:".06em" },
 
-  tabs:{ display:"flex", gap:4, marginBottom:18, background:"rgba(255,255,255,.05)",
-    border:"1px solid rgba(255,255,255,.08)", borderRadius:12, padding:4, flexWrap:"wrap" },
-  tab:{ flex:1, minWidth:90, background:"none", border:"none", color:"#9aa6d0", padding:"10px 12px",
-    cursor:"pointer", fontSize:13, fontWeight:700, borderRadius:9, display:"flex", alignItems:"center",
-    justifyContent:"center", gap:4 },
-  tabOn:{ background:"rgba(145,70,255,.22)", color:"#e9ddff", boxShadow:"inset 0 0 0 1px rgba(145,70,255,.4)" },
+  dashWrap:{ maxWidth:780, margin:"0 auto" },
+  topBar:{ display:"flex", justifyContent:"space-between", gap:18, background:"var(--surface)",
+    border:"1px solid var(--line)", borderRadius:18, padding:"22px 24px", marginBottom:20, boxShadow:"var(--shadow)" },
+  topCodeLabel:{ fontSize:10, fontWeight:700, letterSpacing:".14em", textTransform:"uppercase", color:"var(--muted)" },
+  topCode:{ fontFamily:"var(--font-mono)", fontWeight:800, color:"var(--gold)", letterSpacing:".14em", lineHeight:1.15, margin:"4px 0 6px" },
+  topMeta:{ fontSize:12.5, color:"var(--ink-dim)" },
+  topActions:{ display:"flex", gap:8, flexWrap:"wrap", alignItems:"center" },
+  ghostBtn:{ background:"var(--surface-2)", border:"1px solid var(--line-strong)", color:"var(--ink-dim)",
+    padding:"10px 15px", borderRadius:9, cursor:"pointer", fontSize:12, fontWeight:700, fontFamily:"var(--font-body)" },
+  ghostBtnSm:{ background:"var(--surface-2)", border:"1px solid var(--line-strong)", color:"var(--ink-dim)",
+    padding:"8px 13px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:700, fontFamily:"var(--font-body)" },
+  goLiveBtn:{ background:"var(--green)", border:"none", color:"#04210f", padding:"10px 19px", borderRadius:9,
+    cursor:"pointer", fontSize:12.5, fontWeight:900, fontFamily:"var(--font-body)", letterSpacing:".02em",
+    boxShadow:"0 8px 20px rgba(52,211,153,.26)" },
+  endBtn:{ background:"var(--red)", border:"none", color:"#2b0707", padding:"10px 19px", borderRadius:9,
+    cursor:"pointer", fontSize:12.5, fontWeight:900, fontFamily:"var(--font-body)", letterSpacing:".02em" },
+
+  tabs:{ display:"flex", gap:4, marginBottom:18, background:"var(--surface-2)", border:"1px solid var(--line)",
+    borderRadius:13, padding:4, flexWrap:"wrap" },
+  tab:{ flex:1, minWidth:88, background:"none", border:"none", color:"var(--muted)", padding:"11px 12px",
+    cursor:"pointer", fontSize:12.5, fontWeight:700, borderRadius:10, display:"flex", alignItems:"center",
+    justifyContent:"center", gap:6, fontFamily:"var(--font-body)", letterSpacing:".02em" },
+  tabOn:{ background:"var(--surface-hi)", color:"var(--ink)", boxShadow:"inset 0 0 0 1px var(--line-strong)" },
   tabDot:{ display:"inline-flex", alignItems:"center", justifyContent:"center", minWidth:18, height:18,
-    fontSize:11, fontWeight:900, color:"#fff", background:"#dc2626", borderRadius:9, padding:"0 5px" },
+    fontSize:10.5, fontWeight:900, color:"#2b0707", background:"var(--red)", borderRadius:9, padding:"0 5px",
+    fontFamily:"var(--font-mono)" },
 
-  card:{ background:"rgba(16,28,66,.72)", border:"1px solid rgba(255,255,255,.1)", borderRadius:16,
-    padding:"clamp(16px,4vw,24px)", boxShadow:"0 10px 30px rgba(0,0,0,.28)" },
-  cardH:{ fontSize:15, fontWeight:800, margin:"0 0 16px" },
-  label:{ display:"block", fontSize:11, color:"#8e9ac4", textTransform:"uppercase", letterSpacing:"0.08em",
-    marginBottom:6, marginTop:14 },
-  miniLabel:{ fontSize:10, color:"#8e9ac4", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:6 },
-  input:{ width:"100%", background:"rgba(255,255,255,.06)", border:"1px solid rgba(255,255,255,.16)", borderRadius:10,
-    color:"#eef0ff", padding:"11px 14px", fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" },
-  optEditor:{ background:"rgba(255,255,255,.04)", border:"1px solid rgba(255,255,255,.1)", borderRadius:12,
-    padding:14, marginBottom:10 },
-  chipOdds:{ background:"rgba(255,255,255,.07)", border:"1px solid rgba(255,255,255,.16)", color:"#b6c0e6",
-    padding:"8px 16px", borderRadius:9, cursor:"pointer", fontSize:14, fontWeight:800 },
-  chipOddsOn:{ background:"#fbbf24", border:"1px solid #fbbf24", color:"#1a1400" },
-  addBtn:{ background:"none", border:"1px dashed rgba(255,255,255,.2)", color:"#8e9ac4", padding:10,
-    borderRadius:10, cursor:"pointer", width:"100%", fontSize:13, marginTop:4 },
-  rmBtn:{ background:"rgba(248,113,113,.12)", border:"1px solid rgba(248,113,113,.35)", color:"#f87171",
-    borderRadius:9, padding:"0 14px", cursor:"pointer", fontSize:14 },
-  rmBtnSm:{ background:"rgba(248,113,113,.12)", border:"1px solid rgba(248,113,113,.35)", color:"#f87171",
-    borderRadius:7, padding:"4px 9px", cursor:"pointer", fontSize:12, flexShrink:0 },
+  panel:{ background:"var(--surface)", border:"1px solid var(--line)", borderRadius:18,
+    padding:"clamp(18px,4vw,24px)", boxShadow:"var(--shadow)" },
+  panelH:{ fontSize:13, fontWeight:800, margin:"0 0 18px", letterSpacing:".1em", textTransform:"uppercase", color:"var(--ink-dim)" },
+  label:{ display:"block", fontSize:10.5, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".13em",
+    marginBottom:8, fontWeight:700 },
+  miniLabel:{ fontSize:10, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".13em", marginBottom:8, fontWeight:700 },
+  input:{ width:"100%", background:"var(--field)", border:"1px solid var(--line-strong)", borderRadius:10,
+    color:"var(--ink)", padding:"12px 14px", fontSize:13.5, fontFamily:"var(--font-body)", outline:"none",
+    boxSizing:"border-box" },
+  inputErr:{ borderColor:"var(--red)" },
+  notice:{ fontSize:12, color:"var(--ink-dim)", background:"var(--field)", border:"1px solid var(--line)",
+    borderRadius:10, padding:"12px 14px", marginBottom:16, lineHeight:1.65 },
 
-  // ── Cartes de marché, style bookmaker ──
-  mCard:{ background:"rgba(16,28,66,.78)", border:"1px solid rgba(255,255,255,.1)", borderRadius:16,
-    marginBottom:14, overflow:"hidden", boxShadow:"0 10px 28px rgba(0,0,0,.3)" },
-  mHeader:{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, padding:"12px 16px",
-    background:"linear-gradient(90deg, rgba(124,58,237,.35), rgba(37,60,140,.25))",
-    borderBottom:"1px solid rgba(255,255,255,.08)" },
-  mTitle:{ fontSize:14, fontWeight:800, flex:1, lineHeight:1.4, color:"#f4f2ff" },
-  mBody:{ padding:16 },
-  oddsGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))", gap:10 },
-  oddsBtn:{ background:"#fff", borderRadius:12, padding:"12px 10px", textAlign:"center",
-    border:"2px solid transparent", transition:"transform .12s, box-shadow .12s", userSelect:"none" },
-  oddsBtnSel:{ border:"2px solid #7c3aed", boxShadow:"0 0 0 4px rgba(124,58,237,.25)", transform:"translateY(-2px)" },
-  oddsBtnMine:{ border:"2px solid #a855f7", background:"#f6f0ff" },
-  oddsBtnWin:{ border:"2px solid #16a34a", background:"#effcf3" },
-  oddsLabel:{ fontSize:12, color:"#4b5563", fontWeight:700, marginBottom:4,
-    overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
-  oddsValue:{ fontSize:22, fontWeight:900, color:"#dc2626", lineHeight:1.1, fontFamily:"'DM Mono',monospace" },
-  oddsMeta:{ fontSize:10, color:"#9ca3af", marginTop:4 },
-  oddsMine:{ fontSize:10, color:"#7c3aed", marginTop:4, fontWeight:800 },
+  optEditor:{ background:"var(--field)", border:"1px solid var(--line)", borderRadius:13, padding:15, marginBottom:11 },
+  optEditorHead:{ display:"flex", gap:9, alignItems:"center", marginBottom:13 },
+  optIndex:{ width:25, height:25, flexShrink:0, borderRadius:7, background:"var(--surface-hi)",
+    border:"1px solid var(--line-strong)", color:"var(--gold)", display:"flex", alignItems:"center",
+    justifyContent:"center", fontSize:11.5, fontWeight:800, fontFamily:"var(--font-mono)" },
+  chipRow:{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:10 },
+  chipOdds:{ background:"var(--surface-hi)", border:"1px solid var(--line-strong)", color:"var(--ink-dim)",
+    padding:"9px 15px", borderRadius:9, cursor:"pointer", fontSize:13, fontWeight:800,
+    fontFamily:"var(--font-mono)", letterSpacing:".02em" },
+  chipOddsOn:{ background:"var(--gold)", borderColor:"var(--gold)", color:"#1a1206" },
+  optPreview:{ fontSize:12, color:"var(--ink-dim)", marginTop:9 },
+  addBtn:{ background:"none", border:"1px dashed var(--line-strong)", color:"var(--muted)", padding:11,
+    borderRadius:10, cursor:"pointer", width:"100%", fontSize:12.5, fontWeight:700, fontFamily:"var(--font-body)" },
+  rmBtn:{ background:"rgba(248,113,113,.1)", border:"1px solid rgba(248,113,113,.3)", color:"var(--red)",
+    borderRadius:9, padding:"0 14px", cursor:"pointer", fontSize:13, flexShrink:0, height:41 },
+  rmBtnSm:{ background:"rgba(248,113,113,.1)", border:"1px solid rgba(248,113,113,.3)", color:"var(--red)",
+    borderRadius:7, padding:"5px 9px", cursor:"pointer", fontSize:11, flexShrink:0 },
 
-  slip:{ marginTop:14, background:"rgba(255,255,255,.05)", border:"1px solid rgba(255,255,255,.12)",
-    borderRadius:12, padding:14 },
-  slipEmpty:{ fontSize:13, color:"#8e9ac4", textAlign:"center", padding:"6px 0" },
-  slipTop:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8, flexWrap:"wrap", gap:6 },
-  slipLabel:{ fontSize:11, color:"#8e9ac4", textTransform:"uppercase", letterSpacing:"0.08em" },
-  slipWin:{ fontSize:12, color:"#4ade80" },
-  quickBtn:{ background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.16)", color:"#dfe4f7",
-    borderRadius:8, padding:"9px 8px", cursor:"pointer", fontSize:12, fontWeight:700 },
+  // ── Carte de marché ──
+  mCard:{ background:"var(--surface)", border:"1px solid var(--line)", borderRadius:18, marginBottom:15,
+    overflow:"hidden", boxShadow:"var(--shadow)" },
+  mHeader:{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, padding:"14px 18px",
+    background:"var(--surface-2)", borderBottom:"1px solid var(--line)", borderLeft:"3px solid var(--gold)" },
+  mTitle:{ fontSize:14.5, fontWeight:800, flex:1, lineHeight:1.45, letterSpacing:"-.005em" },
+  mBody:{ padding:18 },
+  oddsGrid:{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(118px,1fr))", gap:10 },
+  oddsTile:{ background:"var(--tile)", border:"1px solid var(--line-strong)", borderRadius:13,
+    padding:"13px 11px", textAlign:"center", color:"var(--ink)", fontFamily:"var(--font-body)",
+    transition:"border-color .15s, background .15s, transform .12s", display:"block", width:"100%" },
+  oddsTileSel:{ background:"rgba(245,185,59,.14)", borderColor:"var(--gold)", transform:"translateY(-2px)",
+    boxShadow:"0 0 0 3px rgba(245,185,59,.16)" },
+  oddsTileMine:{ borderColor:"var(--violet)", background:"rgba(139,92,246,.13)" },
+  oddsTileWin:{ borderColor:"var(--green)", background:"rgba(52,211,153,.12)" },
+  oddsLabel:{ fontSize:12, color:"var(--ink-dim)", fontWeight:700, marginBottom:6, lineHeight:1.3,
+    overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"var(--font-cond)", letterSpacing:".02em" },
+  oddsValue:{ fontSize:25, fontWeight:800, color:"var(--gold)", lineHeight:1, fontFamily:"var(--font-mono)",
+    fontVariantNumeric:"tabular-nums", letterSpacing:"-.02em" },
+  oddsBarTrack:{ height:3, background:"var(--line-strong)", borderRadius:2, marginTop:9, overflow:"hidden" },
+  oddsBarFill:{ height:"100%", borderRadius:2, transition:"width .4s ease" },
+  oddsMeta:{ fontSize:10, color:"var(--muted)", marginTop:7, fontFamily:"var(--font-mono)" },
+  oddsMineTag:{ fontSize:10, color:"var(--violet-lt)", marginTop:7, fontWeight:800, letterSpacing:".04em" },
 
-  mFoot:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:14, flexWrap:"wrap", gap:8 },
-  linkBtn:{ background:"none", border:"none", color:"#8e9ac4", cursor:"pointer", fontSize:12, padding:0, fontWeight:600 },
-  closeBtn:{ background:"rgba(251,191,36,.14)", border:"1px solid rgba(251,191,36,.45)", color:"#fbbf24",
-    padding:"7px 13px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 },
-  resolveBtn:{ background:"rgba(74,222,128,.14)", border:"1px solid rgba(74,222,128,.45)", color:"#4ade80",
-    padding:"7px 13px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 },
-  undoBtn:{ background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.22)", color:"#dfe4f7",
-    padding:"7px 14px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 },
-  cancelBtn:{ background:"rgba(248,113,113,.12)", border:"1px solid rgba(248,113,113,.4)", color:"#f87171",
-    padding:"6px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700, whiteSpace:"nowrap" },
+  slip:{ marginTop:15, background:"var(--field)", border:"1px solid var(--line-strong)", borderRadius:13, padding:15 },
+  slipEmpty:{ fontSize:12.5, color:"var(--muted)", textAlign:"center", padding:"7px 0" },
+  slipTop:{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:9, flexWrap:"wrap", gap:7 },
+  slipLabel:{ fontSize:10.5, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".13em", fontWeight:700 },
+  slipWin:{ fontSize:12, color:"var(--ink-dim)" },
+  quickRow:{ display:"flex", gap:7, marginTop:9 },
+  quickBtn:{ flex:1, background:"var(--surface-hi)", border:"1px solid var(--line-strong)", color:"var(--ink-dim)",
+    borderRadius:9, padding:"10px 7px", cursor:"pointer", fontSize:12, fontWeight:800, fontFamily:"var(--font-mono)" },
+  quickBtnMax:{ color:"var(--gold)", borderColor:"rgba(245,185,59,.42)" },
 
-  betsList:{ marginTop:12, borderTop:"1px solid rgba(255,255,255,.1)", paddingTop:10 },
-  betsEmpty:{ fontSize:12, color:"#6b7aa8", textAlign:"center", padding:"10px 0" },
-  betRow:{ display:"flex", alignItems:"center", gap:9, padding:"8px 0",
-    borderBottom:"1px solid rgba(255,255,255,.06)" },
+  mFoot:{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:15, flexWrap:"wrap", gap:10 },
+  mActions:{ display:"flex", gap:7, flexWrap:"wrap" },
+  linkBtn:{ background:"none", border:"none", color:"var(--muted)", cursor:"pointer", fontSize:11.5, padding:0,
+    fontWeight:700, fontFamily:"var(--font-body)" },
+  warnBtn:{ background:"rgba(245,185,59,.1)", border:"1px solid rgba(245,185,59,.38)", color:"var(--gold)",
+    padding:"8px 13px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:800, fontFamily:"var(--font-body)" },
+  approveBtn:{ background:"rgba(52,211,153,.11)", border:"1px solid rgba(52,211,153,.38)", color:"var(--green)",
+    padding:"8px 13px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:800, fontFamily:"var(--font-body)" },
+  dangerBtn:{ background:"none", border:"1px solid rgba(248,113,113,.26)", color:"rgba(248,113,113,.85)",
+    padding:"8px 13px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:700, fontFamily:"var(--font-body)" },
+  dangerSolid:{ background:"var(--red)", border:"none", color:"#2b0707", padding:"8px 14px", borderRadius:8,
+    cursor:"pointer", fontSize:11.5, fontWeight:900, fontFamily:"var(--font-body)" },
+  confirmBox:{ marginTop:13, background:"rgba(248,113,113,.08)", border:"1px solid rgba(248,113,113,.32)",
+    borderRadius:11, padding:"13px 15px", display:"flex", justifyContent:"space-between", alignItems:"center",
+    gap:12, flexWrap:"wrap" },
+  confirmTxt:{ fontSize:12.5, color:"#fca5a5", lineHeight:1.5 },
+
+  betsList:{ marginTop:14, borderTop:"1px solid var(--line)", paddingTop:12 },
+  betsEmpty:{ fontSize:12, color:"var(--muted)", textAlign:"center", padding:"12px 0" },
+  betRow:{ display:"flex", alignItems:"center", gap:10, padding:"9px 0", borderBottom:"1px solid var(--line)" },
   betAva:{ width:26, height:26, borderRadius:"50%", objectFit:"cover", flexShrink:0 },
-  betName:{ fontSize:13, fontWeight:700, flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
-  betOpt:{ fontSize:11, color:"#b6c0e6", background:"rgba(255,255,255,.07)", padding:"2px 8px",
-    borderRadius:10, whiteSpace:"nowrap" },
-  betAmt:{ fontSize:12, fontWeight:800, color:"#c4b5fd", whiteSpace:"nowrap" },
+  betName:{ fontSize:12.5, fontWeight:700, flex:1, minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
+  betOpt:{ fontSize:10.5, color:"var(--ink-dim)", background:"var(--surface-hi)", padding:"3px 9px",
+    borderRadius:11, whiteSpace:"nowrap", fontFamily:"var(--font-cond)", fontWeight:700 },
+  betAmt:{ fontSize:12, fontWeight:800, color:"var(--gold)", whiteSpace:"nowrap", fontFamily:"var(--font-mono)" },
 
-  badgeOpen:{ fontSize:11, color:"#052e16", background:"#4ade80", padding:"4px 11px", borderRadius:20,
-    whiteSpace:"nowrap", fontWeight:800 },
-  badgeClosed:{ fontSize:11, color:"#1a1400", background:"#fbbf24", padding:"4px 11px", borderRadius:20,
-    whiteSpace:"nowrap", fontWeight:800 },
-  badgeResolved:{ fontSize:11, color:"#dfe4f7", background:"rgba(255,255,255,.14)", padding:"4px 11px",
-    borderRadius:20, whiteSpace:"nowrap", fontWeight:800 },
+  badge:{ display:"inline-flex", alignItems:"center", gap:6, fontSize:10, padding:"5px 11px", borderRadius:20,
+    whiteSpace:"nowrap", fontWeight:800, letterSpacing:".1em", textTransform:"uppercase", fontFamily:"var(--font-body)" },
+  badgeDot:{ width:5, height:5, borderRadius:"50%", background:"currentColor" },
+  badgeOpen:{ color:"var(--green)", background:"rgba(52,211,153,.13)", border:"1px solid rgba(52,211,153,.32)" },
+  badgeClosed:{ color:"var(--gold)", background:"rgba(245,185,59,.12)", border:"1px solid rgba(245,185,59,.3)" },
+  badgeResolved:{ color:"var(--muted)", background:"var(--surface-hi)", border:"1px solid var(--line-strong)" },
 
-  myBetNote:{ marginTop:12, fontSize:13, color:"#c4b5fd", background:"rgba(145,70,255,.12)",
-    border:"1px solid rgba(145,70,255,.3)", borderRadius:10, padding:"10px 14px",
-    display:"flex", justifyContent:"space-between", alignItems:"center", gap:10, flexWrap:"wrap" },
+  myBetNote:{ marginTop:14, fontSize:12.5, color:"var(--ink-dim)", background:"rgba(139,92,246,.1)",
+    border:"1px solid rgba(139,92,246,.28)", borderRadius:11, padding:"11px 15px",
+    display:"flex", justifyContent:"space-between", alignItems:"center", gap:11, flexWrap:"wrap" },
+  cancelBtn:{ background:"rgba(248,113,113,.1)", border:"1px solid rgba(248,113,113,.32)", color:"var(--red)",
+    padding:"7px 13px", borderRadius:8, cursor:"pointer", fontSize:11.5, fontWeight:700,
+    whiteSpace:"nowrap", fontFamily:"var(--font-body)" },
 
-  viewerTopBar:{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"rgba(16,28,66,.72)",
-    border:"1px solid rgba(255,255,255,.1)", borderRadius:16, padding:"18px 20px", marginBottom:18, gap:16,
-    boxShadow:"0 10px 30px rgba(0,0,0,.28)" },
-  viewerLeft:{ display:"flex", alignItems:"center", gap:14 },
-  bigAva:{ width:50, height:50, borderRadius:"50%", border:"2px solid #9146ff", flexShrink:0 },
-  viewerName:{ fontSize:18, fontWeight:900 },
-  viewerSub:{ fontSize:13, color:"#8e9ac4", marginTop:2 },
-  statsRow:{ display:"flex", gap:20 },
+  viewerBar:{ display:"flex", justifyContent:"space-between", alignItems:"center", background:"var(--surface)",
+    border:"1px solid var(--line)", borderRadius:18, padding:"18px 22px", marginBottom:18, gap:18, boxShadow:"var(--shadow)" },
+  viewerLeft:{ display:"flex", alignItems:"center", gap:14, minWidth:0 },
+  bigAva:{ width:48, height:48, borderRadius:"50%", border:"2px solid var(--violet)", flexShrink:0 },
+  viewerName:{ fontSize:17, fontWeight:800, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
+  viewerSub:{ fontSize:12.5, color:"var(--muted)", marginTop:3 },
+  statsRow:{ display:"flex", gap:16, alignItems:"center", justifyContent:"space-between" },
+  statDivider:{ width:1, alignSelf:"stretch", background:"var(--line)" },
   statBox:{ textAlign:"center" },
-  statVal:{ fontSize:20, fontWeight:900 },
-  statLab:{ fontSize:10, color:"#7b88b5", textTransform:"uppercase", letterSpacing:"0.08em" },
-  lobbyBanner:{ background:"rgba(145,70,255,.12)", border:"1px solid rgba(145,70,255,.3)", borderRadius:10,
-    padding:"12px 18px", fontSize:14, color:"#c4b5fd", textAlign:"center", marginBottom:18 },
+  statVal:{ fontSize:19, fontWeight:800, fontFamily:"var(--font-mono)", fontVariantNumeric:"tabular-nums" },
+  statLab:{ fontSize:9.5, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".13em", marginTop:3, fontWeight:700 },
+  balanceBox:{ textAlign:"center" },
+  balanceVal:{ fontSize:23, fontWeight:800, color:"var(--gold)", fontFamily:"var(--font-mono)",
+    fontVariantNumeric:"tabular-nums", marginTop:2 },
 
-  rebuyBox:{ background:"linear-gradient(135deg, rgba(180,83,9,.25), rgba(124,58,237,.2))",
-    border:"1px solid rgba(251,191,36,.45)", borderRadius:14, padding:"18px 20px", marginBottom:18, textAlign:"center" },
-  rebuyTitle:{ fontSize:16, fontWeight:900, color:"#fbbf24", marginBottom:6 },
-  rebuyHint:{ fontSize:13, color:"#c9d0ea", lineHeight:1.6 },
-  rebuyNotice:{ fontSize:12, color:"#9aa6d0", background:"rgba(255,255,255,.05)", border:"1px solid rgba(255,255,255,.12)",
-    borderRadius:10, padding:"10px 14px", marginBottom:16, lineHeight:1.6 },
-  rebuyRow:{ display:"flex", alignItems:"center", gap:12, padding:"12px 0",
-    borderBottom:"1px solid rgba(255,255,255,.07)", flexWrap:"wrap" },
-  rebuyName:{ fontSize:14, fontWeight:700 },
-  rebuySub:{ fontSize:12, color:"#8e9ac4", marginTop:2 },
+  lobbyBanner:{ display:"flex", alignItems:"center", justifyContent:"center", gap:9,
+    background:"rgba(139,92,246,.1)", border:"1px solid rgba(139,92,246,.28)", borderRadius:11,
+    padding:"13px 18px", fontSize:13, color:"var(--violet-lt)", marginBottom:18, fontWeight:600 },
+  lobbyPulse:{ width:7, height:7, borderRadius:"50%", background:"var(--violet-lt)" },
 
-  lbRow:{ display:"flex", alignItems:"center", gap:10, padding:"11px 0", borderBottom:"1px solid rgba(255,255,255,.07)" },
-  lbMe:{ background:"rgba(145,70,255,.1)", borderRadius:10, padding:"11px 10px", margin:"0 -10px" },
-  lbRank:{ fontSize:16, width:30, textAlign:"center", flexShrink:0 },
-  lbAva:{ width:32, height:32, borderRadius:"50%", objectFit:"cover", flexShrink:0 },
-  lbName:{ flex:1, fontSize:14, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" },
-  lbBal:{ fontSize:14, fontWeight:800, color:"#c4b5fd", whiteSpace:"nowrap" },
-  lbLast:{ fontSize:12, fontWeight:800, whiteSpace:"nowrap", minWidth:62, textAlign:"right" },
+  rebuyBox:{ background:"linear-gradient(140deg, rgba(245,185,59,.13), rgba(139,92,246,.1))",
+    border:"1px solid rgba(245,185,59,.38)", borderRadius:16, padding:"20px 22px", marginBottom:18, textAlign:"center" },
+  rebuyTitle:{ fontSize:15.5, fontWeight:800, color:"var(--gold)", marginBottom:7, letterSpacing:".01em" },
+  rebuyHint:{ fontSize:13, color:"var(--ink-dim)", lineHeight:1.65 },
+  rebuyRow:{ display:"flex", alignItems:"center", gap:12, padding:"13px 0", borderBottom:"1px solid var(--line)", flexWrap:"wrap" },
+  rebuyName:{ fontSize:13.5, fontWeight:700 },
+  rebuySub:{ fontSize:11.5, color:"var(--muted)", marginTop:3 },
+  link:{ color:"var(--violet-lt)", textDecoration:"none" },
 
-  resultsWrap:{ maxWidth:580, margin:"0 auto", textAlign:"center" },
-  resTitle:{ fontSize:"clamp(30px,8vw,46px)", fontWeight:900, margin:"32px 0 8px" },
-  resSub:{ fontSize:15, color:"#8e9ac4", marginBottom:32 },
-  winCard:{ background:"linear-gradient(135deg, rgba(124,58,237,.3), rgba(22,163,74,.18))",
-    border:"2px solid #a855f7", borderRadius:20, padding:"clamp(20px,5vw,34px) 24px", marginBottom:26,
-    boxShadow:"0 16px 44px rgba(124,58,237,.3)" },
-  winAva:{ width:80, height:80, borderRadius:"50%", border:"3px solid #a855f7", marginBottom:12 },
-  winName:{ fontSize:"clamp(20px,5vw,28px)", fontWeight:900, marginBottom:8 },
-  winBal:{ fontSize:"clamp(24px,6vw,32px)", fontWeight:900, color:"#c4b5fd", marginBottom:8 },
-  winLabel:{ fontSize:12, color:"#4ade80", letterSpacing:"0.15em", textTransform:"uppercase", fontWeight:800 },
-  myRank:{ fontSize:16, color:"#9aa6d0", marginBottom:8 },
+  lbHead:{ display:"flex", alignItems:"center", gap:10, padding:"0 0 9px", borderBottom:"1px solid var(--line)" },
+  lbHeadCell:{ fontSize:9.5, color:"var(--muted)", textTransform:"uppercase", letterSpacing:".13em", fontWeight:700 },
+  lbRow:{ display:"flex", alignItems:"center", gap:10, padding:"11px 0", borderBottom:"1px solid var(--line)" },
+  lbMe:{ background:"rgba(139,92,246,.1)", borderRadius:11, padding:"11px 11px", margin:"0 -11px",
+    borderBottom:"1px solid transparent" },
+  lbRank:{ width:24, textAlign:"center", flexShrink:0, fontSize:13, fontWeight:700, color:"var(--muted)",
+    fontFamily:"var(--font-mono)" },
+  lbAva:{ width:31, height:31, borderRadius:"50%", objectFit:"cover", flexShrink:0 },
+  lbName:{ flex:1, fontSize:13.5, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", minWidth:0 },
+  lbBal:{ fontSize:13.5, fontWeight:800, color:"var(--gold)", whiteSpace:"nowrap", fontFamily:"var(--font-mono)",
+    fontVariantNumeric:"tabular-nums" },
+  lbLast:{ fontSize:12, fontWeight:800, whiteSpace:"nowrap", minWidth:66, textAlign:"right",
+    fontFamily:"var(--font-mono)", fontVariantNumeric:"tabular-nums" },
 
-  empty:{ textAlign:"center", color:"#6b7aa8", padding:"36px 0", fontSize:14 },
-  emptyLink:{ color:"#c4b5fd", cursor:"pointer" },
-  loader:{ textAlign:"center", color:"#c4b5fd", padding:60, fontSize:24 },
-  errBanner:{ background:"rgba(220,38,38,.15)", border:"1px solid rgba(220,38,38,.5)", borderRadius:10,
-    padding:"12px 18px", color:"#fca5a5", fontSize:14, marginBottom:18,
-    display:"flex", justifyContent:"space-between", alignItems:"center" },
-  errClose:{ background:"none", border:"none", color:"#fca5a5", cursor:"pointer", fontSize:16 },
+  resultsWrap:{ maxWidth:600, margin:"0 auto", textAlign:"center" },
+  resTitle:{ fontSize:"clamp(29px,7vw,44px)", fontWeight:800, margin:"30px 0 8px", letterSpacing:"-.02em" },
+  resSub:{ fontSize:14, color:"var(--muted)", marginBottom:32, fontFamily:"var(--font-mono)", letterSpacing:".06em" },
+  winCard:{ background:"linear-gradient(160deg, rgba(245,185,59,.15), rgba(139,92,246,.12))",
+    border:"1px solid rgba(245,185,59,.42)", borderRadius:22, padding:"clamp(22px,5vw,34px) 24px",
+    marginBottom:26, boxShadow:"0 20px 52px rgba(0,0,0,.45)" },
+  crown:{ fontSize:34, color:"var(--gold)", marginBottom:10, lineHeight:1 },
+  winAva:{ width:78, height:78, borderRadius:"50%", border:"3px solid var(--gold)", marginBottom:13 },
+  winName:{ fontSize:"clamp(20px,5vw,27px)", fontWeight:800, marginBottom:9 },
+  winBal:{ fontSize:"clamp(24px,6vw,32px)", fontWeight:800, color:"var(--gold)", marginBottom:11,
+    fontFamily:"var(--font-mono)", fontVariantNumeric:"tabular-nums" },
+  winLabel:{ fontSize:10.5, color:"var(--green)", letterSpacing:".18em", textTransform:"uppercase", fontWeight:800 },
+  myRank:{ fontSize:15, color:"var(--ink-dim)", marginBottom:10 },
+
+  empty:{ textAlign:"center", color:"var(--muted)", padding:"40px 0", fontSize:13.5 },
+  emptyLink:{ color:"var(--gold)", cursor:"pointer", fontWeight:700 },
+  loader:{ textAlign:"center", color:"var(--gold)", padding:60, fontSize:24 },
+  errBanner:{ background:"rgba(248,113,113,.12)", border:"1px solid rgba(248,113,113,.42)", borderRadius:11,
+    padding:"13px 17px", color:"#fca5a5", fontSize:13.5, marginBottom:18,
+    display:"flex", justifyContent:"space-between", alignItems:"center", gap:12 },
+  errClose:{ background:"none", border:"none", color:"#fca5a5", cursor:"pointer", fontSize:15 },
 };
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800;900&family=DM+Mono:wght@400;500&display=swap');
-  *{box-sizing:border-box;}
-  body{margin:0;background:#050b24;}
-  input:focus,textarea:focus{border-color:#a855f7!important;box-shadow:0 0 0 3px rgba(168,85,247,.2);}
-  input::placeholder{color:#6b7aa8;}
-  button{font-family:inherit;}
-  button:hover{filter:brightness(1.12);}
-  .toast{position:fixed;bottom:24px;right:24px;padding:13px 20px;border-radius:10px;font-size:14px;
-    font-family:'Syne',sans-serif;z-index:9999;animation:fadeUp .2s ease;max-width:340px;line-height:1.5;
-    box-shadow:0 10px 30px rgba(0,0,0,.4);}
-  .toast-ok{background:#0b3d20;border:1px solid #4ade80;color:#86efac;}
-  .toast-err{background:#3d0b0b;border:1px solid #f87171;color:#fca5a5;}
-  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-  .spin{display:inline-block;animation:spin 1s linear infinite;}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  ::-webkit-scrollbar{width:6px;}
-  ::-webkit-scrollbar-track{background:#050b24;}
-  ::-webkit-scrollbar-thumb{background:#2a3a68;border-radius:3px;}
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=Archivo+Narrow:wght@500;600;700&family=JetBrains+Mono:wght@500;700;800&display=swap');
+
+:root{
+  --bg:#060b1f;
+  --surface:rgba(16,25,55,.82);
+  --surface-2:rgba(22,33,70,.72);
+  --surface-hi:rgba(31,45,90,.85);
+  --tile:rgba(12,20,46,.86);
+  --field:rgba(9,15,36,.8);
+  --line:rgba(255,255,255,.075);
+  --line-strong:rgba(255,255,255,.15);
+  --ink:#eef1fb;
+  --ink-dim:#a6b0d0;
+  --muted:#6f7ba3;
+  --gold:#f5b93b;
+  --violet:#8b5cf6;
+  --violet-lt:#c4b5fd;
+  --green:#34d399;
+  --red:#f87171;
+  --shadow:0 14px 38px rgba(0,0,0,.4);
+  --font-body:'Archivo','Trebuchet MS',system-ui,sans-serif;
+  --font-cond:'Archivo Narrow','Archivo',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;background:#060b1f;}
+body{font-family:var(--font-body);-webkit-font-smoothing:antialiased;}
+h1,h2,h3{text-wrap:balance;}
+
+input,button,textarea,select{font-family:inherit;}
+input::placeholder{color:#5c6890;}
+input:focus,textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 0 3px rgba(245,185,59,.16);}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
+
+button{transition:filter .15s ease, transform .12s ease;}
+button:not(:disabled):hover{filter:brightness(1.12);}
+button:not(:disabled):active{transform:translateY(1px);}
+button:disabled{opacity:.4;cursor:not-allowed;}
+a{color:var(--violet-lt);}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
+
+.odds-live:hover{border-color:var(--gold)!important;background:rgba(245,185,59,.09)!important;}
+
+.toast{position:fixed;bottom:22px;right:22px;left:auto;max-width:min(340px,calc(100vw - 44px));
+  padding:13px 18px;border-radius:12px;font-size:13.5px;font-weight:600;z-index:9999;
+  animation:slideIn .22s cubic-bezier(.2,.9,.3,1);line-height:1.5;
+  box-shadow:0 16px 40px rgba(0,0,0,.5);backdrop-filter:blur(12px);}
+.toast-ok{background:rgba(6,42,28,.94);border:1px solid rgba(52,211,153,.5);color:#6ee7b7;}
+.toast-err{background:rgba(47,10,10,.94);border:1px solid rgba(248,113,113,.5);color:#fca5a5;}
+@keyframes slideIn{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+
+.spin{display:inline-block;animation:spin 1.1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-track{background:#060b1f;}
+::-webkit-scrollbar-thumb{background:#243355;border-radius:5px;border:2px solid #060b1f;}
+::-webkit-scrollbar-thumb:hover{background:#31436e;}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.01ms!important;transition-duration:.01ms!important;}
+}
+@media (max-width:480px){
+  .toast{right:14px;left:14px;max-width:none;bottom:14px;}
+}
 `;
